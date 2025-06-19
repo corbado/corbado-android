@@ -1,0 +1,20 @@
+{
+  "auth": {
+    "plugins": {
+      "awsCognitoAuthPlugin": {
+        "CognitoUserPool": {
+          "Default": {
+            "PoolId": "eu-central-1_zx5Izc8cg",
+            "Region": "eu-central-1",
+            "AppClientId": "6rm4g0rl8ecc12v08gtmjvbfrl"
+          }
+        },
+        "Auth": {
+          "Default": {
+            "authenticationFlowType": "USER_SRP_AUTH"
+          }
+        }
+      }
+    }
+  }
+} 

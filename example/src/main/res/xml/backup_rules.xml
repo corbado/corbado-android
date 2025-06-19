@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- For more information on vector drawables, see https://developer.android.com/guide/topics/graphics/vector-drawable-resources -->
+    <include
+        domain="sharedpref"
+        path="."
+        requireFlags="clientSideEncryption" />
+    <exclude
+        domain="database"
+        path="." />
+    <exclude
+        domain="external"
+        path="." />
+</full-backup-content> 
