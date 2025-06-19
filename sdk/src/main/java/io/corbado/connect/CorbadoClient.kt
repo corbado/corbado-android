@@ -3,6 +3,7 @@ package io.corbado.connect
 import com.corbado.api.models.*
 import com.corbado.api.v1.CorbadoConnectApi
 import io.corbado.simplecredentialmanager.RPPlatformPublicKeyCredentialAssertion
+import io.corbado.simplecredentialmanager.RPPlatformPublicKeyCredentialRegistration
 import kotlinx.serialization.json.Json
 
 internal class CorbadoClient(
@@ -69,8 +70,22 @@ internal class CorbadoClient(
         return corbadoConnectApi.connectAppendStart(req)
     }
 
-    suspend fun appendFinish(attestationResponse: String): ConnectAppendFinishRsp {
-        val req = ConnectAppendFinishReq(attestationResponse = attestationResponse)
+    suspend fun appendFinish(authenticatorResponse: RPPlatformPublicKeyCredentialRegistration): ConnectAppendFinishRsp {
+        val attestationResponse = RPPlatformPublicKeyCredentialRegistration(
+            id = authenticatorResponse.id,
+            rawId = authenticatorResponse.rawId,
+            type = authenticatorResponse.type,
+            response = RPPlatformPublicKeyCredentialRegistration.Response(
+                clientDataJSON = authenticatorResponse.response.clientDataJSON,
+                attestationObject = authenticatorResponse.response.attestationObject,
+                transports = authenticatorResponse.response.transports ?: emptyList()
+            )
+        )
+
+        val json = Json { ignoreUnknownKeys = true }
+        val serializedAttestationResponse = json.encodeToString(RPPlatformPublicKeyCredentialRegistration.serializer(), attestationResponse)
+
+        val req = ConnectAppendFinishReq(attestationResponse = serializedAttestationResponse)
         return corbadoConnectApi.connectAppendFinish(req)
     }
 

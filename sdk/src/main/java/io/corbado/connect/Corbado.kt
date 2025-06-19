@@ -1,12 +1,11 @@
 package io.corbado.connect
 
 import android.content.Context
+import com.corbado.api.models.ClientInformation
+import com.corbado.api.models.ClientStateMeta
 import com.corbado.api.v1.CorbadoConnectApi
 import io.corbado.simplecredentialmanager.AuthorizationController
 import io.corbado.simplecredentialmanager.real.RealAuthorizationController
-import okhttp3.OkHttpClient
-import com.corbado.api.models.ClientInformation
-import com.corbado.api.models.ClientStateMeta
 
 // Placeholder data classes for state management
 internal data class ConnectProcess(
@@ -14,18 +13,25 @@ internal data class ConnectProcess(
     val frontendApiUrl: String,
     var loginData: ConnectLoginInitData? = null,
     var appendData: ConnectAppendInitData? = null,
+    var manageData: ConnectManageInitData? = null,
     var attestationOptions: String? = null,
 )
 
 internal data class ConnectLoginInitData(
     val loginAllowed: Boolean,
     val conditionalUIChallenge: String?,
-    val expiresAt: Int
+    val expiresAt: Long
 )
 
 internal data class ConnectAppendInitData(
     val appendAllowed: Boolean,
-    val expiresAt: Int
+    val expiresAt: Long
+)
+
+internal data class ConnectManageInitData(
+    val manageAllowed: Boolean,
+    var flags: Map<String, String> = emptyMap(),
+    val expiresAt: Long?
 )
 
 // Placeholder for error handling
@@ -51,6 +57,7 @@ class Corbado(
     internal var process: ConnectProcess? = null
     private val processIdInterceptor: ProcessIdInterceptor
     internal var loginInitCompleted: Long? = null
+    internal var appendInitCompleted: Long? = null
 
     init {
         val baseUrl = "https://%s.%s".format(projectId, frontendApiUrlSuffix ?: "frontendapi.cloud.corbado.io")
@@ -78,11 +85,11 @@ class Corbado(
     internal fun buildClientInfo(): ClientInformation {
         val clientEnvHandleEntry = clientStateService.getClientEnvHandle()
         val clientStateMeta = clientEnvHandleEntry?.let {
-            ClientStateMeta(ts = it.second, source = ClientStateMeta.Source.native)
+            ClientStateMeta(ts = it.ts, source = ClientStateMeta.Source.native)
         }
 
         return ClientInformation(
-            clientEnvHandle = clientEnvHandleEntry?.first,
+            clientEnvHandle = clientEnvHandleEntry?.data,
             isNative = true,
             clientEnvHandleMeta = clientStateMeta,
             nativeMeta = PasskeyClientTelemetryCollector.collectData()

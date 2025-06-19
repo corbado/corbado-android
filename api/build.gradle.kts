@@ -7,14 +7,13 @@ plugins {
 
 val generatedSourcesDir = "${buildDir}/generated/openapi"
 
-openApiGenerate {
+tasks.withType<GenerateTask> {
     generatorName.set("kotlin")
     inputSpec.set("$projectDir/../openapi/corbado_public_api.yml")
     outputDir.set(generatedSourcesDir)
-    ignoreFileOverride.set("$projectDir/.openapi-generator-ignore")
+    packageName.set("com.corbado.api")
     apiPackage.set("com.corbado.api.v1")
     modelPackage.set("com.corbado.api.models")
-    invokerPackage.set("com.corbado.api.invoker")
 
     configOptions.set(mapOf(
         "library" to "jvm-okhttp4",
@@ -24,6 +23,10 @@ openApiGenerate {
 
 sourceSets.main {
     java.srcDir(generatedSourcesDir)
+}
+
+tasks.named("openApiGenerate") {
+    mustRunAfter(tasks.named("clean"))
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {

@@ -2,63 +2,157 @@ package io.corbado.connect
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
+import com.corbado.api.models.PasskeyOperation
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.util.Date
 
-internal class ClientStateService(context: Context, projectId: String) {
-    private val prefs: SharedPreferences
+@Serializable
+internal enum class LoginIdentifierType {
+    EMAIL, PHONE, USERNAME
+}
 
+@Serializable
+internal enum class PasskeyCeremonyType {
+    LOCAL, CDA, SECURITY_KEY
+}
+
+@Serializable
+internal data class LastLogin(
+    val identifierType: LoginIdentifierType,
+    val identifierValue: String,
+    val ceremonyType: PasskeyCeremonyType,
+    val operationType: String
+) {
     companion object {
-        private const val PREFS_NAME = "CorbadoClientState"
-        private const val KEY_LAST_LOGIN = "last_login"
-        private const val KEY_CLIENT_ENV_HANDLE = "client_env_handle"
-        private const val KEY_INVITATION_TOKEN = "invitation_token"
+        fun from(passkeyOperation: PasskeyOperation): LastLogin {
+            val ceremonyType = when (passkeyOperation.ceremonyType) {
+                PasskeyOperation.CeremonyType.local -> PasskeyCeremonyType.LOCAL
+                PasskeyOperation.CeremonyType.cda -> PasskeyCeremonyType.CDA
+                PasskeyOperation.CeremonyType.securityMinusKey -> PasskeyCeremonyType.SECURITY_KEY
+            }
+
+            val identifierType = when (passkeyOperation.identifierType) {
+                com.corbado.api.models.LoginIdentifierType.email -> LoginIdentifierType.EMAIL
+                com.corbado.api.models.LoginIdentifierType.phone -> LoginIdentifierType.PHONE
+                com.corbado.api.models.LoginIdentifierType.username -> LoginIdentifierType.USERNAME
+            }
+
+            return LastLogin(
+                identifierType = identifierType,
+                identifierValue = passkeyOperation.identifierValue,
+                ceremonyType = ceremonyType,
+                operationType = passkeyOperation.operationType.value
+            )
+        }
     }
+}
+
+@Serializable
+internal enum class Source(val metaSource: String) {
+    LOCAL_STORAGE("ls"),
+    URL("url"),
+    NATIVE("native")
+}
+
+@Serializable
+internal data class ClientStateEntry<T>(
+    val data: T?,
+    val source: Source,
+    val ts: Long
+)
+
+internal class ClientStateService(context: Context, private val projectId: String) {
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences("CorbadoClientState", Context.MODE_PRIVATE)
+
+    private var cachedLastLogin: ClientStateEntry<LastLogin>? = null
+    private var cachedClientEnvHandle: ClientStateEntry<String>? = null
+    private var cachedInvitationToken: ClientStateEntry<String>? = null
 
     init {
-        // Use a unique name for the preferences file based on the project ID
-        val prefsName = "$PREFS_NAME-$projectId"
-        prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        cachedLastLogin = getEntryFromUserDefaults(getStorageKeyLastLogin())
+        cachedClientEnvHandle = getEntryFromUserDefaults(getStorageKeyClientHandle())
+        cachedInvitationToken = getEntryFromUserDefaults(getStorageKeyInvitationToken())
     }
 
-    // Example of how we'll store and retrieve data.
-    // I will add more methods as needed when implementing the main flows.
-
-    fun setLastLogin(username: String) {
-        prefs.edit().putString(KEY_LAST_LOGIN, username).apply()
+    fun getLastLogin(): ClientStateEntry<LastLogin>? {
+        return cachedLastLogin
     }
 
-    fun getLastLogin(): String? {
-        return prefs.getString(KEY_LAST_LOGIN, null)
+    fun setLastLogin(lastLogin: LastLogin) {
+        val entry = ClientStateEntry(lastLogin, Source.NATIVE, Date().time / 1000)
+        cachedLastLogin = entry
+        setEntryToUserDefaults(entry, getStorageKeyLastLogin())
     }
 
     fun clearLastLogin() {
-        prefs.edit().remove(KEY_LAST_LOGIN).apply()
+        cachedLastLogin = null
+        removeEntryFromUserDefaults(getStorageKeyLastLogin())
     }
 
-    fun setInvitationToken(token: String) {
-        prefs.edit().putString(KEY_INVITATION_TOKEN, token).apply()
+    fun getClientEnvHandle(): ClientStateEntry<String>? {
+        return cachedClientEnvHandle
     }
 
-    fun getInvitationToken(): String? {
-        return prefs.getString(KEY_INVITATION_TOKEN, null)
-    }
-
-    fun setClientEnvHandle(handle: String, ts: Long) {
-        val data = "$handle,$ts"
-        prefs.edit().putString(KEY_CLIENT_ENV_HANDLE, data).apply()
-    }
-
-    fun getClientEnvHandle(): Pair<String, Long>? {
-        val data = prefs.getString(KEY_CLIENT_ENV_HANDLE, null) ?: return null
-        val parts = data.split(',')
-        if (parts.size != 2) return null
-        return Pair(parts[0], parts[1].toLongOrNull() ?: 0)
+    fun setClientEnvHandle(clientEnvHandle: String) {
+        val entry = ClientStateEntry(clientEnvHandle, Source.LOCAL_STORAGE, Date().time / 1000)
+        cachedClientEnvHandle = entry
+        setEntryToUserDefaults(entry, getStorageKeyClientHandle())
     }
 
     fun clearClientEnvHandle() {
-        prefs.edit().remove(KEY_CLIENT_ENV_HANDLE).apply()
+        cachedClientEnvHandle = null
+        removeEntryFromUserDefaults(getStorageKeyClientHandle())
+    }
+
+    fun getInvitationToken(): ClientStateEntry<String>? {
+        return cachedInvitationToken
+    }
+
+    fun setInvitationToken(invitationToken: String) {
+        val entry = ClientStateEntry(invitationToken, Source.NATIVE, Date().time / 1000)
+        cachedInvitationToken = entry
+        setEntryToUserDefaults(entry, getStorageKeyInvitationToken())
+    }
+
+    fun clearInvitationToken() {
+        cachedInvitationToken = null
+        removeEntryFromUserDefaults(getStorageKeyInvitationToken())
     }
 
     fun clearAll() {
-        prefs.edit().clear().apply()
+        clearLastLogin()
+        clearClientEnvHandle()
+        clearInvitationToken()
+    }
+
+    private fun getStorageKeyClientHandle(): String = "cbo_client_handle-$projectId"
+    private fun getStorageKeyLastLogin(): String = "cbo_connect_last_login-$projectId"
+    private fun getStorageKeyInvitationToken(): String = "cbo_connect_invitation_token-$projectId"
+
+    private inline fun <reified T> getEntryFromUserDefaults(key: String): ClientStateEntry<T>? {
+        val json = prefs.getString(key, null) ?: return null
+        return try {
+            Json.decodeFromString(json)
+        } catch (e: Exception) {
+            // Log error
+            null
+        }
+    }
+
+    private inline fun <reified T> setEntryToUserDefaults(entry: ClientStateEntry<T>?, key: String) {
+        if (entry == null) {
+            prefs.edit { remove(key) }
+            return
+        }
+        val json = Json.encodeToString(entry)
+        prefs.edit { putString(key, json) }
+    }
+
+    private fun removeEntryFromUserDefaults(key: String) {
+        prefs.edit { remove(key) }
     }
 } 

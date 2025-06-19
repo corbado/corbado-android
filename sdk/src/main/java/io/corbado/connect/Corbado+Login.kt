@@ -36,7 +36,7 @@ suspend fun Corbado.isLoginAllowed(): ConnectLoginStep = withContext(Dispatchers
     try {
         val clientInfo = buildClientInfo()
         val invitationToken = clientStateService.getInvitationToken()
-        val res = client.loginInit(clientInfo, invitationToken)
+        val res = client.loginInit(clientInfo, invitationToken?.data)
 
         val loginData = ConnectLoginInitData(
             loginAllowed = res.loginAllowed,
@@ -70,13 +70,13 @@ suspend fun Corbado.clearOneTap() {
 }
 
 suspend fun Corbado.loginWithOneTap(): ConnectLoginStatus = withContext(Dispatchers.IO) {
-    val lastLogin = clientStateService.getLastLogin()
+    val lastLogin = clientStateService.getLastLogin()?.data
         ?: return@withContext ConnectLoginStatus.InitFallback(
             null,
             AuthError("missing_last_login", "One-tap login requested but no last login found.")
         )
 
-    return@withContext loginWithTextField(lastLogin)
+    return@withContext loginWithTextField(lastLogin.identifierValue)
 }
 
 suspend fun Corbado.loginWithTextField(identifier: String): ConnectLoginStatus =
@@ -120,7 +120,9 @@ suspend fun Corbado.loginWithTextField(identifier: String): ConnectLoginStatus =
             }
 
             finishRsp.passkeyOperation?.let {
-                clientStateService.setLastLogin(it.identifierValue)
+                val lastLogin = LastLogin.from(it)
+                clientStateService.setLastLogin(lastLogin)
+
                 return@withContext ConnectLoginStatus.Done(
                     finishRsp.signedPasskeyData,
                     it.identifierValue
@@ -181,7 +183,8 @@ suspend fun Corbado.loginWithoutIdentifier(
         }
 
         finishRsp.passkeyOperation?.let {
-            clientStateService.setLastLogin(it.identifierValue)
+            val lastLogin = LastLogin.from(it)
+            clientStateService.setLastLogin(lastLogin)
             return@withContext ConnectLoginStatus.Done(
                 finishRsp.signedPasskeyData,
                 it.identifierValue
@@ -236,8 +239,10 @@ private suspend fun Corbado.getConnectLoginStepLoginInit(loginData: ConnectLogin
         return ConnectLoginStep.InitFallback()
     }
 
-    if (useOneTap && clientStateService.getLastLogin() != null) {
-        return ConnectLoginStep.InitOneTap(clientStateService.getLastLogin()!!)
+    if (useOneTap) {
+        clientStateService.getLastLogin()?.data?.let {
+            return ConnectLoginStep.InitOneTap(it.identifierValue)
+        }
     }
 
     return ConnectLoginStep.InitTextField(loginData.conditionalUIChallenge)
