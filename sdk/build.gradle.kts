@@ -1,10 +1,11 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
-    namespace = "com.corbado.sdk"
+    namespace = "io.corbado.connect"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
@@ -34,9 +35,11 @@ android {
 
 dependencies {
     implementation(project(":api"))
-    // I am using a placeholder for the simple-credential-manager dependency.
-    // Please provide the correct dependency coordinates.
-    implementation("com.example:simple-credential-manager:1.0.0")
+    implementation("io.corbado:simple-credential-manager:1.0.0-SNAPSHOT")
+    implementation(libs.okhttp)
+
+    // Serialization for JSON handling
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

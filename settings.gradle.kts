@@ -15,4 +15,10 @@ dependencyResolutionManagement {
 
 rootProject.name = "corbado-android"
 include(":api")
-include(":sdk") 
+include(":sdk")
+
+includeBuild("../simple-credential-manager") {
+    dependencySubstitution {
+        substitute(module("io.corbado:simple-credential-manager")).using(project(":library"))
+    }
+} 
