@@ -1,5 +1,7 @@
 package io.corbado.connect.example.pages
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -7,6 +9,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithTag
+import io.corbado.connect.example.hasTestTagPrefix
 
 /**
  * Page object for the Profile Screen.
@@ -22,12 +26,9 @@ class ProfileScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRu
      */
     fun countNumberOfPasskeys(): Int {
         return try {
-            // This is a simplified implementation - in reality you'd need to count
-            // the actual passkey items in the list
-            // For now, we'll use a placeholder approach
-            val passkeyNodes = composeTestRule.onAllNodesWithText("Passkey", substring = true)
+            val passkeyNodes = composeTestRule.onAllNodes(hasTestTagPrefix("PasskeyListItem-"))
             passkeyNodes.fetchSemanticsNodes().size
-        } catch (e: Exception) {
+        } catch (e: AssertionError) {
             0
         }
     }
@@ -36,13 +37,15 @@ class ProfileScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRu
      * Get the list of passkey IDs.
      */
     fun getPasskeyIds(): List<String> {
-        // This is a placeholder implementation
-        // In reality, you'd need to extract the actual passkey IDs from the UI
-        return emptyList()
+        val prefix = "PasskeyListItem-"
+
+        return composeTestRule.onAllNodes(hasTestTagPrefix(prefix))
+            .fetchSemanticsNodes()
+            .mapNotNull { it.config.getOrNull(SemanticsProperties.TestTag)?.removePrefix(prefix) }
     }
     
     /**
-     * Append/create a new passkey.
+     * Append/create a new passkey.<^x
      */
     fun appendPasskey() {
         waitAndClick("CreatePasskeyButton")
@@ -52,11 +55,12 @@ class ProfileScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRu
      * Delete a passkey by ID.
      */
     fun deletePasskey(passkeyId: String, complete: Boolean = false) {
-        // This is a placeholder implementation
-        // In reality, you'd need to find the specific passkey in the list and delete it
-        // For now, we'll simulate the action
+        waitAndClick("DeletePasskeyButton-$passkeyId")
+
         if (complete) {
-            // Simulate confirming the deletion
+            waitAndClick("PasskeyListDeleteButtonConfirm")
+        } else {
+            waitAndClick("PasskeyListDeleteButtonCancel")
         }
     }
     

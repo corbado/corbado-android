@@ -18,33 +18,13 @@ class PostLoginScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTest
      * @param expectAutoAppend Whether to expect automatic passkey append after signup
      */
     fun append(expectAutoAppend: Boolean): ProfileScreen {
-        if (expectAutoAppend) {
-            // In auto-append scenario, passkey creation happens automatically
-            // We just need to wait for it to complete and navigate
-            waitForCondition(10000) {
-                try {
-                    // Check if we can see the create passkey button (meaning auto-append failed)
-                    composeTestRule.onNodeWithTag("CreatePasskeyButton").assertExists()
-                    false // Auto-append failed, manual action needed
-                } catch (e: Exception) {
-                    // Button not visible, auto-append might have succeeded
-                    true
-                }
-            }
-        }
-        
-        // Try to create passkey if button is available
-        try {
-            composeTestRule.onNodeWithTag("CreatePasskeyButton").performClick()
-        } catch (e: Exception) {
-            // Button might not be available if auto-append succeeded
+        if (!expectAutoAppend) {
+            waitAndClick("CreatePasskeyButton")
         }
 
         waitAndClick("ContinueButton")
         
-        return ProfileScreen(composeTestRule).also {
-            it.visible()
-        }
+        return ProfileScreen(composeTestRule).also { it.visible() }
     }
     
     /**
@@ -52,7 +32,7 @@ class PostLoginScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTest
      */
     fun skipAfterSignUp(): TotpSetupScreen {
         composeTestRule.onNodeWithTag("SkipPasskeyButton").performClick()
-        return TotpSetupScreen(composeTestRule)
+        return TotpSetupScreen(composeTestRule).also { it.visible() }
     }
     
     /**
@@ -61,14 +41,14 @@ class PostLoginScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTest
     fun autoSkipAfterSignUp(): TotpSetupScreen {
         // In auto-skip scenarios, the navigation happens automatically
         // We just return the next screen
-        return TotpSetupScreen(composeTestRule)
+        return TotpSetupScreen(composeTestRule).also { it.visible() }
     }
     
     /**
      * Auto-skip to profile (when passkey creation is not required).
      */
     fun autoSkip(): ProfileScreen {
-        return ProfileScreen(composeTestRule)
+        return ProfileScreen(composeTestRule).also { it.visible() }
     }
     
     /**
@@ -76,6 +56,6 @@ class PostLoginScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTest
      */
     fun skip(): ProfileScreen {
         composeTestRule.onNodeWithTag("SkipPasskeyButton").performClick()
-        return ProfileScreen(composeTestRule)
+        return ProfileScreen(composeTestRule).also { it.visible() }
     }
 } 

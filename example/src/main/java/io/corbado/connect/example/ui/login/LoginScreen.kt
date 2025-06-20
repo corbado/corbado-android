@@ -126,7 +126,9 @@ fun FallbackTOTPView(viewModel: LoginViewModel) {
             value = code,
             onValueChange = { code = it },
             label = { Text("6-digit TOTP") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("TOTPTextField")
         )
 
         errorMessage?.let {
@@ -136,7 +138,8 @@ fun FallbackTOTPView(viewModel: LoginViewModel) {
         CorbadoPrimaryButton(
             text = "Submit",
             onClick = { viewModel.verifyTOTP(code) },
-            isLoading = isLoading
+            isLoading = isLoading,
+            modifier = Modifier.testTag("SubmitTOTPButton")
         )
     }
 }
@@ -190,7 +193,7 @@ fun PasskeyTextFieldView(viewModel: LoginViewModel, navController: NavController
             value = email,
             onValueChange = { viewModel.email.value = it },
             label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().testTag("EmailTextField")
         )
 
         errorMessage?.let {
@@ -281,7 +284,8 @@ fun PasskeyErrorSoftView(viewModel: LoginViewModel) {
         CorbadoPrimaryButton(
             text = "Continue",
             onClick = { viewModel.loginWithPasskeyOneTap() },
-            isLoading = isLoading
+            isLoading = isLoading,
+            modifier = Modifier.testTag("LoginErrorSoft")
         )
 
         CorbadoSecondaryButton(

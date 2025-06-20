@@ -47,7 +47,7 @@ class TotpSetupViewModel(application: Application) : AndroidViewModel(applicatio
                     com.amplifyframework.core.Amplify.Auth.getPlugin("awsCognitoAuthPlugin") as AWSCognitoAuthPlugin
 
                 plugin.updateMFAPreference(
-                    totp = MFAPreference.PREFERRED, sms = MFAPreference.NOT_PREFERRED, email = MFAPreference.NOT_PREFERRED,
+                    totp = MFAPreference.PREFERRED,
                     onSuccess = {
                         viewModelScope.launch {
                             _navigationEvents.emit(NavigationEvent.NavigateTo("profile"))

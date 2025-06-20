@@ -70,6 +70,8 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     implementation("com.lightspark:compose-qr-code:1.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("dev.turingcomplete:kotlin-onetimepassword:2.4.1")
+    implementation("commons-codec:commons-codec:1.15")
     implementation(project(":sdk"))
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")

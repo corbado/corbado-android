@@ -1,5 +1,6 @@
 package io.corbado.connect.example
 
+import androidx.compose.runtime.NonSkippableComposable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.corbado.connect.example.pages.LoginScreen
@@ -92,23 +93,141 @@ class ConnectExampleUITests {
     }
     
     /**
-     * Start the app and return the initial login screen.
-     * This mirrors the Swift startApp() function.
+     * Test: Sign up → skip passkey creation → setup TOTP → sign out → login with email/password → 
+     * enter TOTP → skip again → create passkey → sign out → login with one-tap → delete passkey → 
+     * sign out → login again with email/password and TOTP
+     * 
+     * This mirrors the Swift testAppendAfterSignUpSkipped() test.
      */
-    private suspend fun startApp(
-        filteredByGradualRollout: Boolean = false,
-        filteredByMissingDeviceSupport: Boolean = false
-    ): LoginScreen {
-        // The app should already be started by the compose test rule
-        // Create the login screen and wait for it to be visible
-        val loginScreen = LoginScreen(composeTestRule)
+    /*
+    @Test
+    fun testAppendAfterSignUpSkipped() = runTest {
+        val initialScreen = startApp()
+        val authenticatorApp = AuthenticatorApp()
+        val email = TestDataFactory.createEmail()
+
+        controlServer.createError = AuthorizationError.Cancelled
+
+        val signUpScreen = initialScreen.navigateToSignUp()
+        val postLoginScreen = signUpScreen.signUpWithValidData(
+            email = email,
+            phoneNumber = TestDataFactory.phoneNumber,
+            password = TestDataFactory.password
+        )
+        val totpSetupScreen = postLoginScreen.skipAfterSignUp()
+
+        val (profileScreen, setupKey) = totpSetupScreen.setupTOTP(authenticatorApp)
+
+        assertEquals(0, profileScreen.countNumberOfPasskeys(), "Should have 0 passkeys after skipping")
+
+        val loginScreen = profileScreen.signOut()
+        assertTrue(loginScreen.awaitState(PasskeyTextField), "Should show text field login")
+        loginScreen.loginWithIdentifierAndPasswordIdentifierFirst(email, TestDataFactory.password)
+        assertTrue(loginScreen.awaitState(FallbackSecondTOTP), "Should show TOTP prompt")
+        val code = authenticatorApp.getCode(setupKey)
+        val profileScreen2 = loginScreen.completeLoginWithTOTP(code!!).skip()
+
+        controlServer.createError = null
+        assertTrue(profileScreen2.countNumberOfPasskeys() == 0, "Should still have 0 passkeys")
+        profileScreen2.appendPasskey()
+        waitForCondition { profileScreen2.countNumberOfPasskeys() == 1 }
+        val passkeyId = profileScreen2.getPasskeyIds()[0]
+        profileScreen2.signOut()
+
+        assertTrue(loginScreen.awaitState(PasskeyOneTap), "Should show one-tap login")
+        val profileScreen3 = loginScreen.loginWithOneTap()
+
+        controlServer.authorizeError = AuthorizationError.Cancelled
+        waitForCondition { profileScreen3.countNumberOfPasskeys() == 1 }
+        profileScreen3.deletePasskey(passkeyId, complete = true)
+        waitForCondition { profileScreen3.countNumberOfPasskeys() == 0 }
+        val loginScreen2 = profileScreen3.signOut()
+
+        assertTrue(loginScreen2.awaitState(PasskeyTextField), "Should show text field login")
+        loginScreen2.loginWithIdentifierAndPasswordIdentifierFirst(email, TestDataFactory.password)
+        assertTrue(loginScreen2.awaitState(FallbackSecondTOTP), "Should show TOTP prompt")
+        val code2 = authenticatorApp.getCode(setupKey)
+        loginScreen2.completeLoginWithTOTP(code2!!).autoSkip()
+    }
+    */
+
+    /**
+     * Test: Sign up → create passkey → sign out → switch account → login with identifier
+     * 
+     * This mirrors the Swift testLoginWithTextField() test.
+     */
+    @Test
+    fun testLoginWithTextField() = runTest {
+        val initialScreen = startApp()
+        val email = TestDataFactory.createEmail()
         
-        // Wait up to 5 seconds for the app to initialize and show the login screen
-        waitForCondition(timeout = 5000L) {
-            loginScreen.visible(timeout = 0.1) // Quick check without additional timeout
-        }
+        val signUpScreen = initialScreen.navigateToSignUp()
+        val profileScreen = signUpScreen.signUpWithValidData(
+            email = email,
+            phoneNumber = TestDataFactory.phoneNumber,
+            password = TestDataFactory.password
+        ).append(expectAutoAppend = true)
+        val loginScreen = profileScreen.signOut()
         
-        return loginScreen
+        loginScreen.switchAccount()
+        val profileScreen2 = loginScreen.loginWithIdentifier(email)
+        waitForCondition { profileScreen2.countNumberOfPasskeys() == 1 }
+    }
+    
+    /**
+     * Test: Sign up → create passkey → sign out → login with one-tap (cancel first, then succeed)
+     * 
+     * This mirrors the Swift testLoginWithOneTap() test.
+     */
+    @Test
+    fun testLoginWithOneTap() = runTest {
+        val initialScreen = startApp()
+        val email = TestDataFactory.createEmail()
+        
+        val signUpScreen = initialScreen.navigateToSignUp()
+        val loginScreen = signUpScreen.signUpWithValidData(
+            email = email,
+            phoneNumber = TestDataFactory.phoneNumber,
+            password = TestDataFactory.password
+        ).append(expectAutoAppend = true).signOut()
+        assertTrue(loginScreen.awaitState(PasskeyOneTap), "Should show one-tap login")
+        
+        controlServer.authorizeError = AuthorizationError.Cancelled
+        loginScreen.loginWithOneTapAndCancel()
+        assertTrue(loginScreen.awaitState(PasskeyErrorSoft), "Should show soft error after cancel")
+        
+        controlServer.authorizeError = null
+        
+        val profileScreen2 = loginScreen.loginOnPasskeyErrorSoft().autoSkip()
+        waitForCondition { profileScreen2.countNumberOfPasskeys() == 1 }
+    }
+    
+    /**
+     * Test: Sign up → create passkey → sign out → switch account → navigate to signup then back → 
+     * login with overlay
+     * 
+     * This mirrors the Swift testLoginWithConditionalUI() test.
+     */
+    @Test
+    fun testLoginWithOverlay() = runTest {
+        val initialScreen = startApp()
+        val email = TestDataFactory.createEmail()
+        
+        // First create an account with passkey
+        val signUpScreen = initialScreen.navigateToSignUp()
+
+        val loginScreen = signUpScreen.signUpWithValidData(
+            email = email,
+            phoneNumber = TestDataFactory.phoneNumber,
+            password = TestDataFactory.password
+        ).append(expectAutoAppend = true).signOut()
+        
+        // To get CUI offered, we need to remove OneTap first
+        loginScreen.switchAccount()
+        val loginScreen2 = loginScreen.navigateToSignUp().navigateToLogin()
+        
+        val profileScreen = loginScreen2.loginWithCUI()
+        waitForCondition { profileScreen.countNumberOfPasskeys() == 1 }
     }
     
     /**
@@ -122,5 +241,33 @@ class ConnectExampleUITests {
         if (!condition()) {
             throw AssertionError("Condition was not met within ${timeout}ms")
         }
+    }
+
+    /**
+     * Start the app and return the initial login screen.
+     * This mirrors the Swift startApp() function.
+     */
+    private suspend fun startApp(
+        filteredByGradualRollout: Boolean = false,
+        filteredByMissingDeviceSupport: Boolean = false
+    ): LoginScreen {
+        // Set additional test mode flags if needed
+        if (filteredByGradualRollout) {
+            MainActivity.isFilteredByGradualRollout = true
+        }
+        if (filteredByMissingDeviceSupport) {
+            MainActivity.isFilteredByMissingDeviceSupport = true
+        }
+
+        // The app should already be started by the compose test rule
+        // Create the login screen and wait for it to be visible
+        val loginScreen = LoginScreen(composeTestRule)
+
+        // Wait up to 5 seconds for the app to initialize and show the login screen
+        waitForCondition(timeout = 5000L) {
+            loginScreen.visible(timeout = 0.1) // Quick check without additional timeout
+        }
+
+        return loginScreen
     }
 } 

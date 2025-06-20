@@ -135,13 +135,15 @@ private fun PasskeyList(
                             onClick = {
                                 onDeleteClick(passkey.id)
                                 showDialog = false
-                            }
+                            },
+                            modifier = Modifier.testTag("PasskeyListDeleteButtonConfirm")
                         )
                     },
                     dismissButton = {
                         CorbadoSecondaryButton(
                             text = "Cancel",
-                            onClick = { showDialog = false }
+                            onClick = { showDialog = false },
+                            modifier = Modifier.testTag("PasskeyListDeleteButtonCancel")
                         )
                     }
                 )
@@ -151,10 +153,11 @@ private fun PasskeyList(
                 headlineContent = { Text(passkey.id) },
                 supportingContent = { Text(passkey.createdMs.toString()) },
                 trailingContent = {
-                    IconButton(onClick = { showDialog = true }) {
+                    IconButton(onClick = { showDialog = true }, modifier = Modifier.testTag("DeletePasskeyButton-${passkey.id}")) {
                         Icon(Icons.Default.Delete, contentDescription = "Delete")
                     }
-                }
+                },
+                modifier = Modifier.testTag("PasskeyListItem-${passkey.id}")
             )
         }
     }

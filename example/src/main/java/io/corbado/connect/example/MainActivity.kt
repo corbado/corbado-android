@@ -41,13 +41,16 @@ class MainActivity : ComponentActivity() {
         
         @JvmStatic
         var controlServerURL: String? = null
+        
+        @JvmStatic
+        var isFilteredByGradualRollout: Boolean = false
+        
+        @JvmStatic
+        var isFilteredByMissingDeviceSupport: Boolean = false
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Parse launch arguments for test mode
-        parseLaunchArguments()
 
         (application as? MainApplication)?.initAmplify()
 
@@ -61,15 +64,18 @@ class MainActivity : ComponentActivity() {
                     var startDestination by remember { mutableStateOf<String?>(null) }
 
                     LaunchedEffect(Unit) {
-                        try {
+                        startDestination = try {
                             val session = Amplify.Auth.fetchAuthSession()
-                            if (session.isSignedIn) {
-                                startDestination = Screen.Profile.route
+                            if (session.isSignedIn && isUITestMode) {
+                                Amplify.Auth.signOut()
+                                Screen.Login.route
+                            } else if (session.isSignedIn) {
+                                Screen.Profile.route
                             } else {
-                                startDestination = Screen.Login.route
+                                Screen.Login.route
                             }
                         } catch (e: Exception) {
-                            startDestination = Screen.Login.route
+                            Screen.Login.route
                         }
                     }
 
@@ -94,27 +100,6 @@ class MainActivity : ComponentActivity() {
                                 TotpSetupScreen(navController)
                             }
                         }
-                    }
-                }
-            }
-        }
-    }
-    
-    private fun parseLaunchArguments() {
-        val extras = intent.extras
-        if (extras != null) {
-            for (key in extras.keySet()) {
-                val value = extras.getString(key)
-                Log.d("MainActivity", "Launch argument: $key = $value")
-                
-                when (key) {
-                    "-UITestMode" -> {
-                        isUITestMode = true
-                        Log.i("MainActivity", "UI Test Mode enabled")
-                    }
-                    "-ControlServerURL" -> {
-                        controlServerURL = value
-                        Log.i("MainActivity", "Control Server URL: $value")
                     }
                 }
             }

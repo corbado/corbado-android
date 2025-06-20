@@ -20,7 +20,7 @@ class SignUpScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRul
      */
     fun navigateToLogin(): LoginScreen {
         composeTestRule.onNodeWithText("Already have an account? Log In").performClick()
-        return LoginScreen(composeTestRule)
+        return LoginScreen(composeTestRule).also { it.visible() }
     }
     
     /**

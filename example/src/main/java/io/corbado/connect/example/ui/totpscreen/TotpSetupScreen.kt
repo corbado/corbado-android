@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -37,14 +38,15 @@ fun TotpSetupScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .testTag("TotpSetupScreen"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("MFA Setup", style = MaterialTheme.typography.headlineMedium)
 
         if (isLoading) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(modifier = Modifier.testTag("LoadingIndicator"))
         } else if (setupDetails != null) {
             val details = setupDetails!!
             QrCodeView(
@@ -54,14 +56,16 @@ fun TotpSetupScreen(
 
             Row {
                 Text("Setup Key:")
-                Text(details.sharedSecret)
+                Text(details.sharedSecret, modifier = Modifier.testTag("SetupKeyText"))
             }
 
             OutlinedTextField(
                 value = totpCode,
                 onValueChange = { totpSetupViewModel.totpCode.value = it },
                 label = { Text("Enter 6-digit code") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("TotpCodeTextField")
             )
 
             errorMessage?.let {
@@ -71,7 +75,8 @@ fun TotpSetupScreen(
             CorbadoPrimaryButton(
                 text = "Complete",
                 onClick = { totpSetupViewModel.completeSetupTOTP() },
-                isLoading = isLoading
+                isLoading = isLoading,
+                modifier = Modifier.testTag("CompleteButton")
             )
         }
     }

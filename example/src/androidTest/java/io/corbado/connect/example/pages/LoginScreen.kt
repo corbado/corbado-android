@@ -24,7 +24,17 @@ class LoginScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRule
         waitAndClick("SignUpButton")
         return SignUpScreen(composeTestRule).also { it.visible() }
     }
-    
+
+    /**
+     * Perform login with email and password (fallback login).
+     */
+    fun loginWithIdentifierAndPasswordIdentifierFirst(email: String, password: String) {
+        waitAndType("EmailTextField", email)
+        waitAndClick("LoginWithPasskeyButton")
+        waitAndType("PasswordTextField", password)
+        waitAndClick("LoginButton")
+    }
+
     /**
      * Perform login with email and password (fallback login).
      */
@@ -70,7 +80,7 @@ class LoginScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRule
                         try {
                             composeTestRule.onNodeWithTag("LoginOneTapButton").assertIsDisplayed()
                             true
-                        } catch (e: Exception) {
+                        } catch (e: AssertionError) {
                             false
                         }
                     }
@@ -78,7 +88,7 @@ class LoginScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRule
                         try {
                             composeTestRule.onNodeWithTag("LoginWithPasskeyButton").assertIsDisplayed()
                             true
-                        } catch (e: Exception) {
+                        } catch (e: AssertionError) {
                             false
                         }
                     }
@@ -86,23 +96,23 @@ class LoginScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRule
                         try {
                             composeTestRule.onNodeWithTag("LoginButton").assertIsDisplayed()
                             true
-                        } catch (e: Exception) {
+                        } catch (e: AssertionError) {
                             false
                         }
                     }
                     LoginStatus.PasskeyErrorSoft -> {
                         try {
-                            composeTestRule.onNodeWithText("Use your passkey to confirm it's really you").assertIsDisplayed()
+                            composeTestRule.onNodeWithTag("LoginErrorSoft").assertIsDisplayed()
                             true
-                        } catch (e: Exception) {
+                        } catch (e: AssertionError) {
                             false
                         }
                     }
                     LoginStatus.FallbackSecondTOTP -> {
                         try {
-                            composeTestRule.onNodeWithText("Enter your TOTP code").assertIsDisplayed()
+                            composeTestRule.onNodeWithTag("SubmitTOTPButton").assertIsDisplayed()
                             true
-                        } catch (e: Exception) {
+                        } catch (e: AssertionError) {
                             false
                         }
                     }
@@ -147,7 +157,7 @@ class LoginScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRule
      * Continue after passkey error soft state.
      */
     fun loginOnPasskeyErrorSoft(): PostLoginScreen {
-        waitAndClick("Continue")
+        waitAndClick("LoginErrorSoft")
         return PostLoginScreen(composeTestRule).also { it.visible() }
     }
     
@@ -155,9 +165,20 @@ class LoginScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRule
      * Complete login with TOTP code.
      */
     fun completeLoginWithTOTP(code: String): PostLoginScreen {
-        waitAndType("TOTPTextField", code) // Assuming there's a test tag for TOTP input
-        waitAndClick("Submit")
+        waitAndType("TOTPTextField", code)
+        waitAndClick("SubmitTOTPButton")
         return PostLoginScreen(composeTestRule).also { it.visible() }
+    }
+    
+    /**
+     * Login with Conditional UI (CUI).
+     * This triggers conditional UI login which uses passkey automatically.
+     */
+    fun loginWithCUI(): ProfileScreen {
+        // Conditional UI is triggered automatically when the conditional UI challenge is present
+        // The user doesn't need to explicitly click anything - it's handled by the system
+        // We just wait for the login to complete and navigate to profile
+        return ProfileScreen(composeTestRule).also { it.visible() }
     }
 }
 
