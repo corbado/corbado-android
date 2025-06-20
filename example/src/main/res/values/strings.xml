@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Connect Example</string>
-</resources> 
+    <string name="asset_statements" translatable="false">
+    [{
+        \"include\": \"https://connect-next.playground.corbado.io/.well-known/assetlinks.json\"
+    }]
+    </string>
+</resources>

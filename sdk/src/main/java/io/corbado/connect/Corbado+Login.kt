@@ -4,6 +4,7 @@ import androidx.credentials.GetPublicKeyCredentialOption
 import androidx.credentials.PublicKeyCredential
 import com.corbado.api.models.FallbackOperationError
 import io.corbado.simplecredentialmanager.AuthorizationError
+import io.corbado.simplecredentialmanager.PublicKeyCredentialAssertion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -15,9 +16,6 @@ sealed class ConnectLoginStep {
 
     data class InitFallback(val username: String? = null, val error: AuthError? = null) :
         ConnectLoginStep()
-
-    data class Done(val session: String, val username: String) : ConnectLoginStep()
-    object InitRetry : ConnectLoginStep()
 }
 
 sealed class ConnectLoginStatus {
@@ -25,7 +23,7 @@ sealed class ConnectLoginStatus {
         ConnectLoginStatus()
 
     data class Done(val session: String, val username: String) : ConnectLoginStatus()
-    object InitRetry : ConnectLoginStatus()
+    data object InitRetry : ConnectLoginStatus()
     data class InitTextField(val challenge: String?, val error: AuthError? = null) :
         ConnectLoginStatus()
 }
@@ -97,8 +95,9 @@ suspend fun Corbado.loginWithTextField(identifier: String): ConnectLoginStatus =
                 handleFallbackOperationError(err)?.let { return@withContext it }
             }
 
+            val assertionOptions = authController.serializeGetCredentialRequest(CorbadoClient.deserializeAssertion(startRsp.assertionOptions))
             val authenticatorRequest =
-                GetPublicKeyCredentialOption(requestJson = startRsp.assertionOptions)
+                GetPublicKeyCredentialOption(requestJson = assertionOptions)
             val response = authController.authorize(listOf(authenticatorRequest))
             authenticatorInteraction = true
             val authenticatorResponse = when (val credential =
@@ -160,8 +159,9 @@ suspend fun Corbado.loginWithoutIdentifier(
 ): ConnectLoginStatus = withContext(Dispatchers.IO) {
     var authenticatorInteraction = false
     try {
+        val assertionOptions = authController.serializeGetCredentialRequest(CorbadoClient.deserializeAssertion(cuiChallenge))
         val authenticatorRequest =
-            GetPublicKeyCredentialOption(requestJson = cuiChallenge)
+            GetPublicKeyCredentialOption(requestJson = assertionOptions)
         val response = authController.authorize(listOf(authenticatorRequest), true)
         authenticatorInteraction = true
         onStart()

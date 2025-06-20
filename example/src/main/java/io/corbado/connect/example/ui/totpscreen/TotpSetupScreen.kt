@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.lightspark.composeqrcode.QrCodeView
+import com.lightspark.composeqr.QrCodeView
 import io.corbado.connect.example.ui.login.NavigationEvent
 
 @Composable
@@ -69,14 +69,9 @@ fun TotpSetupScreen(
 
             Button(
                 onClick = { totpSetupViewModel.completeSetupTOTP() },
-                enabled = !isLoading,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                } else {
-                    Text("Complete")
-                }
+                Text("Complete")
             }
         }
     }

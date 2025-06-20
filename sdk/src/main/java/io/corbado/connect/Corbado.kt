@@ -6,6 +6,8 @@ import com.corbado.api.models.ClientStateMeta
 import com.corbado.api.v1.CorbadoConnectApi
 import io.corbado.simplecredentialmanager.AuthorizationController
 import io.corbado.simplecredentialmanager.real.RealAuthorizationController
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 // Placeholder data classes for state management
 internal data class ConnectProcess(
@@ -37,11 +39,32 @@ internal data class ConnectManageInitData(
 // Placeholder for error handling
 data class AuthError(val code: String, val message: String)
 
+data class Passkey(
+    val id: String,
+    val tags: List<String>,
+    val sourceOS: String,
+    val sourceBrowser: String,
+    val lastUsedMs: Long,
+    val createdMs: Long,
+    val aaguidDetails: AaguidDetails,
+)
+
+data class AaguidDetails(
+    val name: String,
+    val iconLight: String,
+    val iconDark: String,
+)
+
+@Serializable
 enum class ConnectTokenType {
-    PasskeyAppend,
-    PasskeyDelete,
-    PasskeyList,
+    @SerialName("passkey-append") PasskeyAppend,
+    @SerialName("passkey-delete") PasskeyDelete,
+    @SerialName("passkey-list") PasskeyList
 }
+
+data class ConnectTokenError(
+    val description: String? = null
+) : Exception(description)
 
 val defaultAuthError = AuthError(code = "unavailable", message = "Passkey error. Use password to log in.")
 
@@ -55,16 +78,11 @@ class Corbado(
     internal val clientStateService: ClientStateService
     internal var authController: AuthorizationController
     internal var process: ConnectProcess? = null
-    private val processIdInterceptor: ProcessIdInterceptor
     internal var loginInitCompleted: Long? = null
     internal var appendInitCompleted: Long? = null
 
     init {
-        val baseUrl = "https://%s.%s".format(projectId, frontendApiUrlSuffix ?: "frontendapi.cloud.corbado.io")
-        processIdInterceptor = ProcessIdInterceptor()
-
-        val corbadoConnectApi = CorbadoConnectApi(baseUrl)
-        client = CorbadoClient(corbadoConnectApi, processIdInterceptor)
+        client = CorbadoClient(projectId, frontendApiUrlSuffix)
         clientStateService = ClientStateService(context, projectId)
         authController = RealAuthorizationController(context)
     }

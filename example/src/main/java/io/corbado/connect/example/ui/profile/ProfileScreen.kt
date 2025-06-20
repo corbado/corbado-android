@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import io.corbado.connect.Passkey
 import io.corbado.connect.example.ui.login.NavigationEvent
 
 @Composable
@@ -73,42 +74,9 @@ fun ProfileScreen(navController: NavController, profileViewModel: ProfileViewMod
             listMessage?.let {
                 Text(it)
             } ?: run {
-                LazyColumn {
-                    items(passkeys) { passkey ->
-                        var showDialog by remember { mutableStateOf(false) }
-
-                        if (showDialog) {
-                            AlertDialog(
-                                onDismissRequest = { showDialog = false },
-                                title = { Text("Delete Passkey") },
-                                text = { Text("Are you sure you want to delete this passkey?") },
-                                confirmButton = {
-                                    Button(onClick = {
-                                        profileViewModel.deletePasskey(passkey.id)
-                                        showDialog = false
-                                    }) {
-                                        Text("Delete")
-                                    }
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = { showDialog = false }) {
-                                        Text("Cancel")
-                                    }
-                                }
-                            )
-                        }
-
-                        ListItem(
-                            headlineContent = { Text(passkey.id) },
-                            supportingContent = { Text(passkey.created) },
-                            trailingContent = {
-                                IconButton(onClick = { showDialog = true }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Delete")
-                                }
-                            }
-                        )
-                    }
-                }
+                PasskeyList(passkeys, onDeleteClick = { passkeyId ->
+                    profileViewModel.deletePasskey(passkeyId)
+                })
             }
 
             if (passkeyAppendAllowed) {
@@ -128,4 +96,48 @@ fun ProfileScreen(navController: NavController, profileViewModel: ProfileViewMod
             }
         }
     }
-} 
+}
+
+@Composable
+private fun PasskeyList(
+    passkeys: List<Passkey>,
+    onDeleteClick: (passkeyId: String) -> Unit
+) {
+
+    LazyColumn {
+        items(items = passkeys) { passkey: Passkey ->
+            var showDialog by remember { mutableStateOf(false) }
+
+            if (showDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDialog = false },
+                    title = { Text("Delete Passkey") },
+                    text = { Text("Are you sure you want to delete this passkey?") },
+                    confirmButton = {
+                        Button(onClick = {
+                            onDeleteClick(passkey.id)
+                            showDialog = false
+                        }) {
+                            Text("Delete")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+
+            ListItem(
+                headlineContent = { Text(passkey.id) },
+                supportingContent = { Text(passkey.createdMs.toString()) },
+                trailingContent = {
+                    IconButton(onClick = { showDialog = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete")
+                    }
+                }
+            )
+        }
+    }
+}

@@ -21,6 +21,17 @@ android {
         }
     }
 
+    // this signing config only exists to allow everybody to easily run the example
+    // don't use this keystore to sign your own apps
+    signingConfigs {
+        create("example") {
+            keyAlias = "example"
+            keyPassword = "example"
+            storeFile = file("./example.keystore")
+            storePassword = "example"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -28,6 +39,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+
+        debug {
+            signingConfig = signingConfigs.getByName("example")
         }
     }
     compileOptions {
@@ -65,7 +80,11 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.navigation:navigation-compose:2.7.6")
+
+    implementation("com.amplifyframework:core:2.28.0")
+    implementation("com.amplifyframework:core-kotlin:2.28.0")
     implementation("com.amplifyframework:aws-auth-cognito:2.28.0")
+
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

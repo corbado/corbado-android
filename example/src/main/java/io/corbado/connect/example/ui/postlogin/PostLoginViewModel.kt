@@ -3,20 +3,24 @@ package io.corbado.connect.example.ui.postlogin
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
-import com.amplifyframework.core.Amplify
+import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
 import com.amplifyframework.kotlin.core.Amplify
-import io.corbado.connect.Corbado
-import io.corbado.connect.data.ConnectAppendInitRsp
-import io.corbado.connect.data.ConnectTokenError
+import io.corbado.connect.ConnectAppendStep
+import io.corbado.connect.ConnectAppendStatus
+import io.corbado.connect.ConnectTokenError
+import io.corbado.connect.ConnectTokenType
+import io.corbado.connect.completeAppend
 import io.corbado.connect.example.di.CorbadoService
 import io.corbado.connect.example.ui.login.NavigationEvent
 import io.corbado.connect.example.ui.profile.AppBackend
+import io.corbado.connect.isAppendAllowed
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 enum class PostLoginStatus {
     Loading,
@@ -42,38 +46,43 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             val nextStep = corbado.isAppendAllowed(::connectTokenProvider)
             when (nextStep) {
-                is ConnectAppendInitRsp.AskUserForAppend -> {
+                is ConnectAppendStep.AskUserForAppend -> {
                     state.value = PostLoginStatus.PasskeyAppend
-                    if (nextStep.value.autoAppend) {
+                    if (nextStep.autoAppend) {
                         createPasskey()
                     }
                 }
-                is ConnectAppendInitRsp.Skip -> {
+
+                is ConnectAppendStep.Skip -> {
                     skipPasskeyCreation()
                 }
             }
         }
     }
 
-    private suspend fun connectTokenProvider(connectTokenType: Corbado.ConnectTokenType): Result<String> {
-        val session = Amplify.Auth.fetchAuthSession()
-        val idToken = (session as? AWSCognitoAuthSession)?.identityId?.getOrNull()
-
+    private suspend fun connectTokenProvider(): String {
+        val session = Amplify.Auth.fetchAuthSession() as AWSCognitoAuthSession
+        val userPoolToken = session.userPoolTokensResult
+        val idToken = userPoolToken.value?.idToken
         if (idToken == null) {
-            return Result.failure(ConnectTokenError("No id token found"))
+            throw ConnectTokenError("No id token found")
         }
 
-        return AppBackend.getConnectToken(connectTokenType, idToken)
+        val result = AppBackend.getConnectToken(ConnectTokenType.PasskeyAppend, idToken)
+        if (result.isFailure) {
+            throw ConnectTokenError("Could not get connect token")
+        }
+
+        return result.getOrThrow()
     }
 
     fun createPasskey() {
         viewModelScope.launch {
             primaryLoading.value = true
-            val rsp = corbado.completeAppend()
-            rsp.onSuccess {
-                state.value = PostLoginStatus.PasskeyAppended
-            }.onFailure {
-                errorMessage.value = "You have cancelled setting up your passkey. Please try again."
+            when(corbado.completeAppend()) {
+                ConnectAppendStatus.Completed -> state.value = PostLoginStatus.PasskeyAppended
+                ConnectAppendStatus.Cancelled -> errorMessage.value = "You have cancelled setting up your passkey. Please try again."
+                else -> skipPasskeyCreation()
             }
             primaryLoading.value = false
         }
@@ -91,12 +100,12 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private suspend fun hasMFA(): Boolean {
-        return try {
-            val cognitoPlugin = Amplify.Auth.getPlugin("awsCognitoAuthPlugin") as AWSCognitoAuthPlugin
-            val preference = cognitoPlugin.fetchMFAPreference()
-            preference.totp != null
-        } catch (e: Exception) {
-            false
+        return suspendCoroutine { continuation ->
+            val plugin = com.amplifyframework.core.Amplify.Auth.getPlugin("awsCognitoAuthPlugin") as AWSCognitoAuthPlugin
+            plugin.fetchMFAPreference(
+                { continuation.resume(it.enabled?.isNotEmpty() == true) },
+                { continuation.resume(false) }
+            )
         }
     }
 

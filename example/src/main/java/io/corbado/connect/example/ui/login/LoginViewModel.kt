@@ -4,17 +4,25 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.amplifyframework.auth.AuthException
-import com.amplifyframework.auth.result.AuthSignInResult
+import com.amplifyframework.auth.cognito.options.AWSCognitoAuthSignInOptions
+import com.amplifyframework.auth.cognito.options.AuthFlowType
 import com.amplifyframework.auth.result.step.AuthSignInStep
-import com.amplifyframework.core.Amplify
+import io.corbado.connect.ConnectLoginStatus
+import io.corbado.connect.ConnectLoginStep
+import io.corbado.connect.Corbado
+import io.corbado.connect.clearOneTap
 import io.corbado.connect.example.di.CorbadoService
-import io.corbado.connect.*
 import io.corbado.connect.example.ui.Screen
+import io.corbado.connect.isLoginAllowed
+import io.corbado.connect.loginWithOneTap
+import io.corbado.connect.loginWithTextField
+import io.corbado.connect.loginWithoutIdentifier
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.amplifyframework.kotlin.core.Amplify
 
 sealed class NavigationEvent {
     data class NavigateTo(val route: String) : NavigationEvent()
@@ -32,9 +40,9 @@ enum class LoginStatus {
 }
 
 class LoginViewModel(application: Application) : AndroidViewModel(application) {
-    private val corbado = CorbadoService.getInstance(application)
+    private val corbado: Corbado = CorbadoService.getInstance(application)
 
-    private val _status = MutableStateFlow(LoginStatus.Loading)
+    private val _status = MutableStateFlow<LoginStatus>(LoginStatus.Loading)
     val status: StateFlow<LoginStatus> = _status
 
     private val _navigationEvents = MutableSharedFlow<NavigationEvent>()
@@ -46,44 +54,81 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     val errorMessage = MutableStateFlow<String?>(null)
 
     private var initialized = false
+    private var retryCount = 0
 
     fun loadInitialStep() {
         if (initialized) return
         initialized = true
 
         viewModelScope.launch {
+            _status.value = LoginStatus.Loading
             when (val nextStep = corbado.isLoginAllowed()) {
-                is ConnectLoginStep.Done -> {
-                    if (nextStep.value.conditionalUIChallenge != null) {
-                        _status.value = LoginStatus.PasskeyTextField
-                        val result = corbado.loginWithoutIdentifier(nextStep.value.conditionalUIChallenge)
+                is ConnectLoginStep.InitOneTap -> {
+                    email.value = nextStep.username
+                    _status.value = LoginStatus.PasskeyOneTap
+                }
+
+                is ConnectLoginStep.InitTextField -> {
+                    _status.value = LoginStatus.PasskeyTextField
+                    nextStep.challenge?.let {
+                        val result = corbado.loginWithoutIdentifier(it)
                         completePasskeyLogin(result)
-                    } else {
-                        // This case is not handled in the iOS app, but it is a possible state.
-                        // For now, we'll just go to the passkey text field.
-                        _status.value = LoginStatus.PasskeyTextField
                     }
                 }
-                is ConnectLoginInitRsp.LoginNotAllowed -> {
+
+                is ConnectLoginStep.InitFallback -> {
                     _status.value = LoginStatus.FallbackFirst
+                    errorMessage.value = nextStep.error?.message
                 }
             }
         }
     }
 
-    private suspend fun completePasskeyLogin(result: Result<ConnectLoginFinishRsp>) {
+    private suspend fun completePasskeyLogin(result: ConnectLoginStatus) {
         primaryLoading.value = true
-        result.onSuccess {
-            try {
-                val signInResult = Amplify.Auth.confirmSignIn(it.username, mapOf("session" to it.session))
-                if (signInResult.isSignedIn) {
-                    _navigationEvents.emit(NavigationEvent.NavigateTo(Screen.Profile.route))
+        when (result) {
+            is ConnectLoginStatus.Done -> {
+                try {
+                    val options = AWSCognitoAuthSignInOptions.builder()
+                        .authFlowType(AuthFlowType.CUSTOM_AUTH_WITHOUT_SRP)
+                        .build()
+                    val signInResult = Amplify.Auth.signIn(result.username, null, options)
+                    if (signInResult.nextStep.signInStep == AuthSignInStep.CONFIRM_SIGN_IN_WITH_CUSTOM_CHALLENGE) {
+                        val confirmResult = Amplify.Auth.confirmSignIn(result.session)
+                        if (confirmResult.isSignedIn) {
+                            _navigationEvents.emit(NavigationEvent.NavigateTo(Screen.Profile.route))
+                        } else {
+                            errorMessage.value = "Sign in not complete."
+                        }
+                    } else {
+                        errorMessage.value = "Unexpected sign in step: ${signInResult.nextStep.signInStep}"
+                    }
+                } catch (error: AuthException) {
+                    errorMessage.value = error.message
                 }
-            } catch (error: AuthException) {
-                errorMessage.value = error.message
             }
-        }.onFailure {
-            errorMessage.value = it.message
+
+            is ConnectLoginStatus.InitFallback -> {
+                errorMessage.value = result.error?.message
+                result.username?.let { email.value = it }
+                _status.value = LoginStatus.FallbackFirst
+            }
+
+            is ConnectLoginStatus.InitRetry -> {
+                retryCount++
+                if (retryCount > 5) {
+                    _status.value = LoginStatus.FallbackFirst
+                } else if (retryCount > 1) {
+                    _status.value = LoginStatus.PasskeyErrorHard
+                } else {
+                    _status.value = LoginStatus.PasskeyErrorSoft
+                }
+            }
+
+            is ConnectLoginStatus.InitTextField -> {
+                errorMessage.value = result.error?.message
+                _status.value = LoginStatus.PasskeyTextField
+            }
         }
         primaryLoading.value = false
     }
@@ -102,10 +147,10 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 val result = Amplify.Auth.signIn(email.value, password.value)
                 when (result.nextStep.signInStep) {
                     AuthSignInStep.CONFIRM_SIGN_IN_WITH_SMS_MFA_CODE -> _status.value = LoginStatus.FallbackSecondSMS
-                    AuthSignInStep.CONFIRM_SIGN_IN_WITH_TOTP_MFA_CODE -> _status.value = LoginStatus.FallbackSecondTOTP
+                    AuthSignInStep.CONFIRM_SIGN_IN_WITH_TOTP_CODE -> _status.value = LoginStatus.FallbackSecondTOTP
                     AuthSignInStep.DONE -> _navigationEvents.emit(NavigationEvent.NavigateTo(Screen.Profile.route))
                     else -> {
-                        // Not handled in this example
+                        errorMessage.value = "Unexpected sign in step: ${result.nextStep.signInStep}"
                     }
                 }
             } catch (error: AuthException) {
@@ -121,7 +166,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             primaryLoading.value = true
             val result = corbado.loginWithTextField(email.value)
             completePasskeyLogin(result)
-            primaryLoading.value = false
         }
     }
 
@@ -130,7 +174,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             primaryLoading.value = true
             val result = corbado.loginWithOneTap()
             completePasskeyLogin(result)
-            primaryLoading.value = false
         }
     }
 
@@ -141,7 +184,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
             try {
                 val result = Amplify.Auth.confirmSignIn(code)
-                if (result.isSignInComplete) {
+                if (result.isSignedIn) {
                     _navigationEvents.emit(NavigationEvent.NavigateTo(Screen.Profile.route))
                 }
             } catch (error: AuthException) {
@@ -159,7 +202,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
             try {
                 val result = Amplify.Auth.confirmSignIn(code)
-                if (result.isSignInComplete) {
+                if (result.isSignedIn) {
                     _navigationEvents.emit(NavigationEvent.NavigateTo(Screen.Profile.route))
                 }
             } catch (error: AuthException) {

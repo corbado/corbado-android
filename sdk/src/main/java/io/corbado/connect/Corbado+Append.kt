@@ -50,12 +50,8 @@ suspend fun Corbado.isAppendAllowed(connectTokenProvider: suspend () -> String):
 
         val connectToken = connectTokenProvider()
         val startRsp = client.appendStart(connectToken = connectToken, forcePasskeyAppend = false, loadedMs = appendInitLoaded)
-
-        if (startRsp.attestationOptions.isBlank()) {
-            return@withContext ConnectAppendStep.Skip
-        }
-
-        p.attestationOptions = startRsp.attestationOptions
+        val options = startRsp.options ?: return@withContext ConnectAppendStep.Skip
+        p.attestationOptions = authController.serializeCreatePublicKeyCredentialRequest(options)
 
         return@withContext ConnectAppendStep.AskUserForAppend(startRsp.autoAppend, AppendType.DefaultAppend)
     } catch (e: Exception) {

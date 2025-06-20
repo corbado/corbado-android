@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class SignUpViewModel(application: Application) : AndroidViewModel(application) {
     val email = MutableStateFlow("")
@@ -38,10 +39,10 @@ class SignUpViewModel(application: Application) : AndroidViewModel(application) 
                     .userAttributes(userAttributes)
                     .build()
 
-                Amplify.Auth.signUp(email.value, password.value, options)
+                Amplify.Auth.signUp(UUID.randomUUID().toString(), password.value, options)
 
                 val result = Amplify.Auth.signIn(email.value, password.value)
-                if (result.isSignInComplete) {
+                if (result.isSignedIn) {
                     _navigationEvents.emit(NavigationEvent.NavigateTo("profile"))
                 } else {
                     // This case is not handled in this example

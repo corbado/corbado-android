@@ -3,8 +3,9 @@ package io.corbado.connect.example.ui.totpscreen
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.amplifyframework.auth.TOTPSetupDetails
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
-import com.amplifyframework.auth.result.TOTPSetupDetails
+import com.amplifyframework.auth.cognito.MFAPreference
 import com.amplifyframework.kotlin.core.Amplify
 import io.corbado.connect.example.ui.login.NavigationEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -42,11 +43,23 @@ class TotpSetupViewModel(application: Application) : AndroidViewModel(applicatio
 
             try {
                 Amplify.Auth.verifyTOTPSetup(totpCode.value)
-                val cognitoPlugin = Amplify.Auth.getPlugin("awsCognitoAuthPlugin") as AWSCognitoAuthPlugin
-                cognitoPlugin.updateMFAPreference(totp = "PREFERRED")
-                _navigationEvents.emit(NavigationEvent.NavigateTo("profile"))
+                val plugin =
+                    com.amplifyframework.core.Amplify.Auth.getPlugin("awsCognitoAuthPlugin") as AWSCognitoAuthPlugin
+
+                plugin.updateMFAPreference(
+                    totp = MFAPreference.PREFERRED, sms = MFAPreference.NOT_PREFERRED, email = MFAPreference.NOT_PREFERRED,
+                    onSuccess = {
+                        viewModelScope.launch {
+                            _navigationEvents.emit(NavigationEvent.NavigateTo("profile"))
+                        }
+                    },
+                    onError = { error ->
+                        errorMessage.value = "Failed to update MFA preference: ${error.message}"
+                    }
+                )
             } catch (e: Exception) {
-                errorMessage.value = "An unexpected error occurred during TOTP verification: ${e.message}"
+                errorMessage.value =
+                    "An unexpected error occurred during TOTP verification: ${e.message}"
             }
 
             isLoading.value = false

@@ -4,19 +4,22 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.amplifyframework.auth.AuthUserAttributeKey
+import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
 import com.amplifyframework.kotlin.core.Amplify
-import io.corbado.connect.Corbado
-import io.corbado.connect.data.ConnectManageInitRsp
-import io.corbado.connect.data.ConnectTokenError
-import io.corbado.connect.data.models.PasskeyInfo
+import io.corbado.connect.ConnectManageStatus
+import io.corbado.connect.ConnectManageStep
+import io.corbado.connect.ConnectTokenError
+import io.corbado.connect.ConnectTokenType
+import io.corbado.connect.Passkey
+import io.corbado.connect.completePasskeyListAppend
+import io.corbado.connect.deletePasskey
 import io.corbado.connect.example.di.CorbadoService
 import io.corbado.connect.example.ui.login.NavigationEvent
+import io.corbado.connect.isManageAppendAllowed
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
     private val corbado = CorbadoService.getInstance(application)
@@ -25,7 +28,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     val listMessage = MutableStateFlow<String?>(null)
     val email = MutableStateFlow("")
     val phoneNumber = MutableStateFlow("")
-    val passkeys = MutableStateFlow<List<PasskeyInfo>>(emptyList())
+    val passkeys = MutableStateFlow<List<Passkey>>(emptyList())
     val passkeyAppendAllowed = MutableStateFlow(false)
 
     private val _navigationEvents = MutableSharedFlow<NavigationEvent>()
@@ -50,19 +53,18 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 errorMessage.value = "Could not fetch user attributes: ${e.message}"
             }
 
-            val manageStep = corbado.isManageAppendAllowed(::connectTokenProvider)
-            when (manageStep) {
-                is ConnectManageInitRsp.Allowed -> {
-                    passkeys.value = manageStep.value
+            when (val manageStep = corbado.isManageAppendAllowed(::connectTokenProvider)) {
+                is ConnectManageStep.Allowed -> {
+                    passkeys.value = manageStep.passkeys
                     passkeyAppendAllowed.value = true
                 }
 
-                is ConnectManageInitRsp.NotAllowed -> {
-                    passkeys.value = manageStep.value
+                is ConnectManageStep.NotAllowed -> {
+                    passkeys.value = manageStep.passkeys
                     passkeyAppendAllowed.value = false
                 }
 
-                is ConnectManageInitRsp.Error -> {
+                is ConnectManageStep.Error -> {
                     errorMessage.value = "Unable to access passkeys. Check your connection and try again."
                 }
             }
@@ -79,37 +81,46 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private suspend fun connectTokenProvider(connectTokenType: Corbado.ConnectTokenType): Result<String> {
-        val session = Amplify.Auth.fetchAuthSession()
-        val idToken = (session as? AWSCognitoAuthSession)?.identityId?.getOrNull()
-
+    private suspend fun connectTokenProvider(connectTokenType: ConnectTokenType): String {
+        val session = Amplify.Auth.fetchAuthSession() as AWSCognitoAuthSession
+        val userPoolToken = session.userPoolTokensResult
+        val idToken = userPoolToken.value?.idToken
         if (idToken == null) {
-            return Result.failure(ConnectTokenError("No id token found"))
+            throw ConnectTokenError("No id token found")
         }
 
-        return AppBackend.getConnectToken(connectTokenType, idToken)
+        val result = AppBackend.getConnectToken(connectTokenType, idToken)
+        if (result.isFailure) {
+            throw ConnectTokenError("Could not get connect token")
+        }
+
+        return result.getOrThrow()
     }
 
     fun appendPasskey() {
         viewModelScope.launch {
-            val appendStatus = corbado.completePasskeyListAppend(::connectTokenProvider)
-            appendStatus.onSuccess {
-                passkeys.value = it
-                listMessage.value = if (it.isEmpty()) "There is currently no passkey saved for this account." else null
-            }.onFailure {
-                errorMessage.value = "Passkey creation failed. Please try again later."
+            when (val appendStatus = corbado.completePasskeyListAppend(::connectTokenProvider)) {
+                is ConnectManageStatus.Done -> {
+                    passkeys.value = appendStatus.passkeys
+                    listMessage.value = if (appendStatus.passkeys.isEmpty()) "There is currently no passkey saved for this account." else null
+                }
+                else -> {
+                    errorMessage.value = "Passkey creation failed. Please try again later."
+                }
             }
         }
     }
 
     fun deletePasskey(passkeyId: String) {
         viewModelScope.launch {
-            val deleteStatus = corbado.deletePasskey(::connectTokenProvider, passkeyId)
-            deleteStatus.onSuccess {
-                passkeys.value = it
-                listMessage.value = if (it.isEmpty()) "There is currently no passkey saved for this account." else null
-            }.onFailure {
-                errorMessage.value = "Passkey deletion failed. Please try again later."
+            when (val deleteStatus = corbado.deletePasskey(::connectTokenProvider, passkeyId)) {
+                is ConnectManageStatus.Done -> {
+                    passkeys.value = deleteStatus.passkeys
+                    listMessage.value = if (deleteStatus.passkeys.isEmpty()) "There is currently no passkey saved for this account." else null
+                }
+                else -> {
+                    errorMessage.value = "Passkey deletion failed. Please try again later."
+                }
             }
         }
     }

@@ -1,6 +1,6 @@
 package io.corbado.connect.example.ui.profile
 
-import io.corbado.connect.Corbado
+import io.corbado.connect.ConnectTokenType
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader
@@ -11,7 +11,7 @@ import java.net.URL
 
 @Serializable
 data class ConnectTokenRequest(
-    val connectTokenType: String,
+    val connectTokenType: ConnectTokenType,
     val idToken: String,
 )
 
@@ -22,7 +22,7 @@ data class ConnectTokenResponse(
 
 object AppBackend {
     suspend fun getConnectToken(
-        connectTokenType: Corbado.ConnectTokenType,
+        connectTokenType: ConnectTokenType,
         idToken: String
     ): Result<String> {
         return try {
@@ -33,7 +33,7 @@ object AppBackend {
             connection.setRequestProperty("Content-Type", "application/json")
             connection.doOutput = true
 
-            val request = ConnectTokenRequest(connectTokenType.toString(), idToken)
+            val request = ConnectTokenRequest(connectTokenType, idToken)
             val jsonRequest = Json.encodeToString(ConnectTokenRequest.serializer(), request)
 
             val writer = OutputStreamWriter(connection.outputStream)

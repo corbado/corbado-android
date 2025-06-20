@@ -2,14 +2,52 @@ package io.corbado.connect
 
 import com.corbado.api.models.*
 import com.corbado.api.v1.CorbadoConnectApi
+import io.corbado.simplecredentialmanager.PublicKeyCredentialAssertion
+import io.corbado.simplecredentialmanager.PublicKeyCredentialRegistration
+import io.corbado.simplecredentialmanager.PublicKeyCredentialRegistration.PublicKeyCredentialRegistrationOptions
 import io.corbado.simplecredentialmanager.RPPlatformPublicKeyCredentialAssertion
 import io.corbado.simplecredentialmanager.RPPlatformPublicKeyCredentialRegistration
 import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
+
+data class AppendStartResult(
+    val options: PublicKeyCredentialRegistration?,
+    val variant: ConnectAppendStartRsp.Variant,
+    val isRestrictedBrowser: Boolean,
+    val autoAppend: Boolean
+)
 
 internal class CorbadoClient(
-    private val corbadoConnectApi: CorbadoConnectApi,
-    private val processIdInterceptor: ProcessIdInterceptor
+    projectId: String,
+    frontendApiUrlSuffix: String?
 ) {
+    private val corbadoConnectApi: CorbadoConnectApi
+    private val processIdInterceptor: ProcessIdInterceptor
+
+    init {
+        val baseUrl = "https://%s.%s".format(projectId, frontendApiUrlSuffix ?: "frontendapi.cloud.corbado.io")
+        processIdInterceptor = ProcessIdInterceptor()
+
+        val httpClient = OkHttpClient.Builder().addInterceptor(processIdInterceptor).build()
+        corbadoConnectApi = CorbadoConnectApi(baseUrl, httpClient)
+    }
+
+    companion object RelyingPartyServerDeserializer {
+        fun deserializeAssertion(
+            assertionOptions: String
+        ): PublicKeyCredentialAssertion {
+            val json = Json { ignoreUnknownKeys = true }
+            return json.decodeFromString<PublicKeyCredentialAssertion>(assertionOptions)
+        }
+
+        fun deserializeAttestation(
+            attestationOptions: String
+        ): PublicKeyCredentialRegistration {
+            val json = Json { ignoreUnknownKeys = true }
+            return json.decodeFromString<PublicKeyCredentialRegistration>(attestationOptions)
+        }
+    }
+
     suspend fun loginInit(clientInfo: ClientInformation, invitationToken: String?): ConnectLoginInitRsp {
         val req = ConnectLoginInitReq(
             clientInformation = clientInfo,
@@ -61,13 +99,23 @@ internal class CorbadoClient(
         return corbadoConnectApi.connectAppendInit(req)
     }
 
-    suspend fun appendStart(connectToken: String, forcePasskeyAppend: Boolean, loadedMs: Long = 0): ConnectAppendStartRsp {
+    suspend fun appendStart(connectToken: String, forcePasskeyAppend: Boolean, loadedMs: Long = 0): AppendStartResult {
         val req = ConnectAppendStartReq(
             appendTokenValue = connectToken,
             forcePasskeyAppend = forcePasskeyAppend,
             loadedMs = loadedMs
         )
-        return corbadoConnectApi.connectAppendStart(req)
+
+        val res = corbadoConnectApi.connectAppendStart(req)
+        return AppendStartResult(
+            options = res.attestationOptions.takeIf { it.isNotEmpty() }?.let {
+                val json = Json { ignoreUnknownKeys = true }
+                json.decodeFromString<PublicKeyCredentialRegistration>(it)
+            },
+            variant = res.variant,
+            isRestrictedBrowser = res.isRestrictedBrowser,
+            autoAppend = res.autoAppend
+        )
     }
 
     suspend fun appendFinish(authenticatorResponse: RPPlatformPublicKeyCredentialRegistration): ConnectAppendFinishRsp {
@@ -100,7 +148,9 @@ internal class CorbadoClient(
 
     suspend fun manageList(connectToken: String): ConnectManageListRsp {
         val req = ConnectManageListReq(connectToken = connectToken)
-        return corbadoConnectApi.connectManageList(req)
+        val res = corbadoConnectApi.connectManageList(req)
+
+        return res
     }
 
     suspend fun manageDelete(connectToken: String, passkeyId: String): ConnectManageDeleteRsp {
