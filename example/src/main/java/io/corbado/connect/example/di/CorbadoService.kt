@@ -27,6 +27,11 @@ object CorbadoService {
                 )
             }
         }
+
         return instance!!
+    }
+
+    fun resetInstance() {
+        instance = null
     }
 } 

@@ -12,18 +12,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 
-enum class CorbadoEndpoint(endpoint: String) {
-    LoginInit("/connect/login/init"),
-    LoginStart("/connect/login/start"),
-    LoginFinish("/connect/login/finish"),
-    AppendInit("/connect/append/init"),
-    AppendStart("/connect/append/start"),
-    AppendFinish("/connect/append/finish"),
-    ManageInit("/connect/manage/init"),
-    ManageList("/connect/manage/list"),
-    ManageDelete("/connect/manage/delete"),
-}
-
 /**
  * Base class for all page objects, providing common functionality.
  */
@@ -156,9 +144,5 @@ abstract class BaseScreen(protected val composeTestRule: ComposeTestRule) {
         } catch (_: Exception) {
             false
         }
-    }
-
-    protected suspend fun blockCorbadoEndpoint(endpoint: CorbadoEndpoint) {
-
     }
 } 

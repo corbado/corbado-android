@@ -52,11 +52,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun blockCorbadoEndpoint(endpoint: String = "") {
+    fun blockCorbadoEndpoints(urls: List<String> = listOf()) {
         val corbado = CorbadoService.getInstance(application)
-        corbado.
+        corbado.setBlockedUrls(urls)
     }
-    
+
+    fun resetCorbadoInstance() {
+        CorbadoService.resetInstance()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

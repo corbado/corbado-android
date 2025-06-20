@@ -97,7 +97,9 @@ class Corbado(
         clientStateService.setInvitationToken(token)
     }
 
-    fun setApiInterceptor()
+    fun setBlockedUrls(urls: List<String>) {
+        client.setBlockedUrls(urls)
+    }
 
     fun clearProcess() {
         process = null

@@ -113,7 +113,11 @@ class ProfileScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRu
     /**
      * Reload the page/refresh data.
      */
-    fun reloadPage() {
-        composeTestRule.onNodeWithText("Reload").performClick()
+    fun reloadPage(): ProfileScreen {
+        waitAndClick("Reload")
+
+        return ProfileScreen(composeTestRule).also {
+            it.visible()
+        }
     }
 } 

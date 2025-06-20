@@ -23,12 +23,17 @@ internal class CorbadoClient(
 ) {
     private val corbadoConnectApi: CorbadoConnectApi
     private val processIdInterceptor: ProcessIdInterceptor
+    private val urlBlockingInterceptor = UrlBlockingInterceptor()
 
     init {
         val baseUrl = "https://%s.%s".format(projectId, frontendApiUrlSuffix ?: "frontendapi.cloud.corbado.io")
         processIdInterceptor = ProcessIdInterceptor()
 
-        val httpClient = OkHttpClient.Builder().addInterceptor(processIdInterceptor).build()
+        val httpClient = OkHttpClient.Builder()
+            .addInterceptor(processIdInterceptor)
+            .addInterceptor(urlBlockingInterceptor)
+            .build()
+
         corbadoConnectApi = CorbadoConnectApi(baseUrl, httpClient)
     }
 
@@ -163,5 +168,9 @@ internal class CorbadoClient(
 
     fun setProcessId(processId: String?) {
         processIdInterceptor.processId = processId
+    }
+
+    fun setBlockedUrls(urls: List<String>) {
+        urlBlockingInterceptor.setBlockedUrlPaths(urls)
     }
 } 

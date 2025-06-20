@@ -3,7 +3,11 @@ package io.corbado.connect.example
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.corbado.connect.example.pages.LoginScreen
-import io.corbado.connect.example.pages.LoginStatus.*
+import io.corbado.connect.example.pages.LoginStatus.FallbackFirst
+import io.corbado.connect.example.pages.LoginStatus.FallbackSecondTOTP
+import io.corbado.connect.example.pages.LoginStatus.PasskeyErrorSoft
+import io.corbado.connect.example.pages.LoginStatus.PasskeyOneTap
+import io.corbado.connect.example.pages.LoginStatus.PasskeyTextField
 import io.corbado.simplecredentialmanager.AuthorizationError
 import io.corbado.simplecredentialmanager.mocks.ControlServer
 import io.corbado.simplecredentialmanager.mocks.VirtualAuthorizationController
@@ -15,7 +19,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -53,6 +56,9 @@ class ConnectExampleUITests {
         // Reset control server state
         controlServer.createError = null
         controlServer.authorizeError = null
+
+        // Default to cancelled for empty allow credentials (otherwise textField logins would be triggered instantly)
+        controlServer.authorizeWithEmptyAllowCredentials = AuthorizationError.Cancelled
     }
     
     @After
@@ -66,6 +72,8 @@ class ConnectExampleUITests {
         MainActivity.virtualAuthorizationController = null
         MainActivity.isUITestMode = false
         MainActivity.controlServerURL = null
+
+        composeTestRule.activity.resetCorbadoInstance()
 
         // Clear any app-level state (you might need to add more here based on your app)
         clearAppState()
@@ -261,7 +269,9 @@ class ConnectExampleUITests {
             phoneNumber = TestDataFactory.phoneNumber,
             password = TestDataFactory.password
         ).append(expectAutoAppend = true).signOut()
-        
+
+        controlServer.authorizeWithEmptyAllowCredentials = null
+
         // To get CUI offered, we need to remove OneTap first
         loginScreen.switchAccount()
         val loginScreen2 = loginScreen.navigateToSignUp().navigateToLogin()
@@ -310,6 +320,8 @@ class ConnectExampleUITests {
         val initialScreen = startApp()
         val email = TestDataFactory.createEmail()
 
+        controlServer.authorizeWithEmptyAllowCredentials = null
+
         val profileScreen = initialScreen.navigateToSignUp()
             .signUpWithValidData(email = email, phoneNumber = TestDataFactory.phoneNumber, password = TestDataFactory.password)
             .append(expectAutoAppend = true)
@@ -322,8 +334,95 @@ class ConnectExampleUITests {
         assertTrue(loginScreen.awaitState(FallbackFirst, errorMessage = "You previously deleted this passkey. Use your password to log in instead."))
     }
 
+    @Test
+    fun testLoginErrorStatesNetworkBlocking() = runTest {
+        val initialScreen = startApp()
+        val email = TestDataFactory.createEmail()
+
+        val profileScreen = initialScreen.navigateToSignUp()
+            .signUpWithValidData(email = email, phoneNumber = TestDataFactory.phoneNumber, password = TestDataFactory.password)
+            .append(expectAutoAppend = true)
+
+        // Block login-init
+        blockCorbadoEndpoint(CorbadoEndpoint.LoginInit)
+        val loginScreen = profileScreen.signOut()
+        assertTrue(loginScreen.awaitState(FallbackFirst), "Login must init in fallback automatically")
+
+        // Block login-start
+        blockCorbadoEndpoint(CorbadoEndpoint.LoginStart)
+        loginScreen.navigateToSignUp().navigateToLogin()
+        assertTrue(initialScreen.awaitState(PasskeyOneTap))
+        loginScreen.switchAccount()
+        loginScreen.loginWithIdentifierButNoSuccess(email)
+        assertTrue(initialScreen.awaitState(FallbackFirst))
+
+        loginScreen.navigateToSignUp().navigateToLogin()
+
+        // Block login-finish
+        blockCorbadoEndpoint(CorbadoEndpoint.LoginFinish)
+        loginScreen.loginWithIdentifierButNoSuccess(email)
+        assertTrue(initialScreen.awaitState(FallbackFirst, errorMessage = "Passkey error. Use password to log in.", timeout = 5.0))
+        unblockCorbadoEndpoint()
+
+        // Successful login
+        loginScreen.navigateToSignUp().navigateToLogin()
+        loginScreen.loginWithIdentifier(email)
+    }
+
+    @Test
+    fun testLoginErrorStatesPasskeyAppendBlocked() = runTest {
+        val initialScreen = startApp()
+        val authenticatorApp = AuthenticatorApp()
+        val email = TestDataFactory.createEmail()
+
+        // Block append-init
+        blockCorbadoEndpoint(CorbadoEndpoint.AppendInit)
+
+        val signUpScreen = initialScreen.navigateToSignUp()
+        val postLoginScreen = signUpScreen.signUpWithValidData(
+            email = email,
+            phoneNumber = TestDataFactory.phoneNumber,
+            password = TestDataFactory.password
+        )
+
+        val (profileScreen, setupKey) = postLoginScreen.autoSkipAfterSignUp().setupTOTP(authenticatorApp = authenticatorApp)
+        val loginScreen2 = profileScreen.signOut()
+
+        loginScreen2.loginWithIdentifierAndPasswordIdentifierFirst(email, TestDataFactory.password)
+        val code = authenticatorApp.getCode(setupKey)
+
+        // block append-start
+        blockCorbadoEndpoint(CorbadoEndpoint.AppendStart)
+        val profileScreen2 = loginScreen2.completeLoginWithTOTP(code!!).autoSkip()
+
+        val loginScreen3 = profileScreen2.signOut()
+        loginScreen3.loginWithIdentifierAndPasswordIdentifierFirst(email, TestDataFactory.password)
+        val code2 = authenticatorApp.getCode(setupKey)
+
+        // block append-finish
+        blockCorbadoEndpoint(CorbadoEndpoint.AppendFinish)
+        loginScreen3.completeLoginWithTOTP(code2!!).autoSkip()
+    }
+
+    @Test
+    fun testManageErrorStatesNetworkBlocking() = runTest {
+        val initialScreen = startApp()
+        val email = TestDataFactory.createEmail()
+
+        val profileScreen = initialScreen.navigateToSignUp()
+            .signUpWithValidData(email = email, phoneNumber = TestDataFactory.phoneNumber, password = TestDataFactory.password)
+            .append(expectAutoAppend = true)
+
+        waitForCondition { profileScreen.countNumberOfPasskeys() == 1 }
+
+        // Block manage-init
+        blockCorbadoEndpoint(CorbadoEndpoint.ManageInit)
+        val profileScreen2 = profileScreen.reloadPage()
+        profileScreen2.getErrorMessage()
+    }
+
     /*
-    func testLoginErrorStatesNetworkBlocking() async throws {
+    func testManageErrorStatesNetworkBlocking() async throws {
         let initialScreen = try startApp()
         let email = TestDataFactory.createEmail()
 
@@ -332,31 +431,59 @@ class ConnectExampleUITests {
             .signUpWithValidData(email: email, phoneNumber: TestDataFactory.phoneNumber, password: TestDataFactory.password)
             .append(expectAutoAppend: true)
 
-        // block login-init
-        initialScreen.block(blockedUrl: "/connect/login/init")
-        let loginScreen = profileScreen.signOut()
-        XCTAssertTrue(loginScreen.awaitState(loginStatus: .fallbackFirst), "Login must init in fallback automatically")
+        XCTAssertTrue(profileScreen.visible(timeout: 10.0))
+        let passkeyCount = profileScreen.countNumberOfPasskeys()
+        XCTAssertEqual(passkeyCount, 1)
 
-        // block login-start
-        initialScreen.block(blockedUrl: "/connect/login/start")
-        loginScreen.navigateToSignUp().navigateToLogin()
-        XCTAssertTrue(initialScreen.awaitState(loginStatus: .passkeyOneTap))
-        loginScreen.switchAccount()
-        loginScreen.loginWithIdentifierButNoSuccess(email: email)
-        XCTAssertTrue(initialScreen.awaitState(loginStatus: .fallbackFirst))
+        // block manage-init
+        initialScreen.block(blockedUrl: "/connect/manage/init")
+        profileScreen.reloadPage()
+        XCTAssertTrue(profileScreen.visible(timeout: 10.0))
 
-        loginScreen.navigateToSignUp().navigateToLogin()
+        XCTAssertEqual(profileScreen.getErrorMessage(), "Unable to access passkeys. Check your connection and try again.")
+        XCTAssertEqual(profileScreen.getListMessage(), "We were unable to show your list of passkeys due to an error. Try again later.")
 
-        // block login-finish
-        initialScreen.block(blockedUrl: "/connect/login/finish")
-        loginScreen.loginWithIdentifierButNoSuccess(email: email)
-        XCTAssertTrue(initialScreen.awaitState(loginStatus: .fallbackFirst, errorMessage: "Passkey error. Use password to log in.", timeout: 5.0))
-        initialScreen.unblock()
+        // block manage-list
+        initialScreen.block(blockedUrl: "/connect/manage/list")
+        profileScreen.reloadPage()
+        XCTAssertTrue(profileScreen.visible(timeout: 10.0))
 
-        // successfull login
-        loginScreen.navigateToSignUp().navigateToLogin()
-        let profileScreen2 = loginScreen.loginWithIdentifier(email: email).autoSkip()
-        XCTAssertTrue(profileScreen2.visible(timeout: 10.0))
+        XCTAssertEqual(profileScreen.getErrorMessage(), "Unable to access passkeys. Check your connection and try again.")
+        XCTAssertEqual(profileScreen.getListMessage(), "We were unable to show your list of passkeys due to an error. Try again later.")
+
+        // block append-start
+        initialScreen.block(blockedUrl: "/connect/append/start")
+        profileScreen.reloadPage()
+        XCTAssertTrue(profileScreen.visible(timeout: 10.0))
+        XCTAssertEqual(profileScreen.countNumberOfPasskeys(), 1)
+        profileScreen.appendPasskey()
+
+        XCTAssertEqual(profileScreen.getErrorMessage(), "Passkey creation failed. Please try again later.")
+        XCTAssertEqual(profileScreen.countNumberOfPasskeys(), 1)
+
+        // block append-finish (we have to delete the passkey first, otherwise we get an excludeCredentials error)
+        profileScreen.deletePasskey(passkeyId: profileScreen.getPasskeyIds()[0], complete: true)
+        try waitForCondition(timeout: 10) { profileScreen.countNumberOfPasskeys() == 0}
+
+        initialScreen.block(blockedUrl: "/connect/append/finish")
+        profileScreen.reloadPage()
+        XCTAssertTrue(profileScreen.visible(timeout: 10.0))
+        profileScreen.appendPasskey()
+
+        XCTAssertEqual(profileScreen.getErrorMessage(), "Passkey creation failed. Please try again later.")
+        XCTAssertEqual(profileScreen.getListMessage(), "There is currently no passkey saved for this account.")
+
+        // block manage-delete
+        initialScreen.block(blockedUrl: "/connect/manage/delete")
+        // apppend passkey (to prepare for manage-delete)
+        profileScreen.appendPasskey()
+        try waitForCondition(timeout: 10) { profileScreen.countNumberOfPasskeys() == 1}
+
+        profileScreen.deletePasskey(passkeyId: profileScreen.getPasskeyIds()[0], complete: true)
+        XCTAssertEqual(profileScreen.getErrorMessage(), "Passkey deletion failed. Please try again later.")
+        XCTAssertEqual(profileScreen.getListMessage(), nil)
+
+        // block connectTokenProvider
     }
      */
 
@@ -392,5 +519,13 @@ class ConnectExampleUITests {
         }
 
         return loginScreen
+    }
+
+    private fun blockCorbadoEndpoint(endpoint: CorbadoEndpoint) {
+        composeTestRule.activity.blockCorbadoEndpoints(listOf(endpoint.path))
+    }
+
+    private fun unblockCorbadoEndpoint() {
+        composeTestRule.activity.blockCorbadoEndpoints(emptyList())
     }
 } 
