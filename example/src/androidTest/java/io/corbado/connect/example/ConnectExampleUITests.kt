@@ -1,6 +1,5 @@
 package io.corbado.connect.example
 
-import androidx.compose.runtime.NonSkippableComposable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.corbado.connect.example.pages.LoginScreen
@@ -8,6 +7,7 @@ import io.corbado.connect.example.pages.LoginStatus.*
 import io.corbado.simplecredentialmanager.AuthorizationError
 import io.corbado.simplecredentialmanager.mocks.ControlServer
 import io.corbado.simplecredentialmanager.mocks.VirtualAuthorizationController
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -15,6 +15,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -31,6 +33,9 @@ class ConnectExampleUITests {
     
     @Before
     fun setUpWithError() {
+        // Clear any existing state first
+        tearDownWithError()
+
         // Start control server for error simulation
         controlServer = ControlServer()
         controlServer.start()
@@ -44,16 +49,53 @@ class ConnectExampleUITests {
         // Set test mode flags
         MainActivity.isUITestMode = true
         MainActivity.controlServerURL = controlServer.baseURL
+
+        // Reset control server state
+        controlServer.createError = null
+        controlServer.authorizeError = null
     }
     
     @After
     fun tearDownWithError() {
-        controlServer.stop()
+        // Stop control server if it exists
+        if (::controlServer.isInitialized) {
+            controlServer.stop()
+        }
         
-        // Clean up static fields
+        // Clean up ALL static fields in MainActivity
         MainActivity.virtualAuthorizationController = null
         MainActivity.isUITestMode = false
         MainActivity.controlServerURL = null
+
+        // Clear any app-level state (you might need to add more here based on your app)
+        clearAppState()
+    }
+
+    /**
+     * Clear any persistent app state that might affect tests.
+     * Add more cleanup here as needed based on your app's state management.
+     */
+    private fun clearAppState() {
+        // Clear shared preferences
+        val context = composeTestRule.activity.applicationContext
+        val sharedPrefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+        sharedPrefs.edit().clear().apply()
+
+        // Clear any authentication state
+        try {
+            // If you're using Amplify Auth, clear its state
+            runBlocking {
+                try {
+                    com.amplifyframework.kotlin.core.Amplify.Auth.signOut()
+                } catch (e: Exception) {
+                    // Ignore errors during cleanup
+                }
+            }
+        } catch (e: Exception) {
+            // Amplify might not be initialized, ignore
+        }
+
+        // Add any other state cleanup here (databases, caches, etc.)
     }
     
     /**
@@ -99,7 +141,6 @@ class ConnectExampleUITests {
      * 
      * This mirrors the Swift testAppendAfterSignUpSkipped() test.
      */
-    /*
     @Test
     fun testAppendAfterSignUpSkipped() = runTest {
         val initialScreen = startApp()
@@ -149,7 +190,6 @@ class ConnectExampleUITests {
         val code2 = authenticatorApp.getCode(setupKey)
         loginScreen2.completeLoginWithTOTP(code2!!).autoSkip()
     }
-    */
 
     /**
      * Test: Sign up → create passkey → sign out → switch account → login with identifier
@@ -229,7 +269,97 @@ class ConnectExampleUITests {
         val profileScreen = loginScreen2.loginWithCUI()
         waitForCondition { profileScreen.countNumberOfPasskeys() == 1 }
     }
-    
+
+    @Test
+    fun testLoginErrorStates() = runTest {
+        val initialScreen = startApp()
+        val nonExistingEmail = "integration-test+0000000000@corbado.com"
+
+        assertTrue(initialScreen.awaitState(PasskeyTextField), "Login must init in passkey text field")
+        initialScreen.loginWithIdentifierButNoSuccess(nonExistingEmail)
+
+        assertTrue(initialScreen.awaitState(PasskeyTextField, errorMessage = "There is no account registered to that email address."), "Should show error for non-existing email")
+    }
+
+    @Test
+    fun testLoginErrorStatesGradualRollout() = runTest {
+        val initialScreen = startApp(allowedByGradualRollout = false)
+        val authenticatorApp = AuthenticatorApp()
+        val email = TestDataFactory.createEmail()
+
+        assertTrue(initialScreen.awaitState(FallbackFirst), "Should show fallback login immediately in gradual rollout")
+        val signUpScreen = initialScreen.navigateToSignUp()
+        // append must be skipped automatically
+        val tOTPSetupScreen = signUpScreen.signUpWithValidData(
+            email = email,
+            phoneNumber = TestDataFactory.phoneNumber,
+            password = TestDataFactory.password
+        ).autoSkipAfterSignUp()
+
+        val (profileScreen, setupKey) = tOTPSetupScreen.setupTOTP(authenticatorApp)
+        assertFalse(profileScreen.passkeyAppendPossible(), "Passkey append button must be hidden in gradual rollout")
+
+        val loginScreen2 = profileScreen.signOut()
+        loginScreen2.loginWithIdentifierAndPassword(email, TestDataFactory.password)
+        val code = authenticatorApp.getCode(setupKey)
+        loginScreen2.completeLoginWithTOTP(code!!).autoSkip()
+    }
+
+    @Test
+    fun testLoginErrorStatesPasskeyDeletedClientSide() = runTest {
+        val initialScreen = startApp()
+        val email = TestDataFactory.createEmail()
+
+        val profileScreen = initialScreen.navigateToSignUp()
+            .signUpWithValidData(email = email, phoneNumber = TestDataFactory.phoneNumber, password = TestDataFactory.password)
+            .append(expectAutoAppend = true)
+
+        val passkeyId = profileScreen.getPasskeyIds()[0]
+        profileScreen.deletePasskey(passkeyId, complete = true)
+        waitForCondition { profileScreen.countNumberOfPasskeys() == 0 }
+
+        val loginScreen = profileScreen.signOut()
+        assertTrue(loginScreen.awaitState(FallbackFirst, errorMessage = "You previously deleted this passkey. Use your password to log in instead."))
+    }
+
+    /*
+    func testLoginErrorStatesNetworkBlocking() async throws {
+        let initialScreen = try startApp()
+        let email = TestDataFactory.createEmail()
+
+        let profileScreen = try await initialScreen
+            .navigateToSignUp()
+            .signUpWithValidData(email: email, phoneNumber: TestDataFactory.phoneNumber, password: TestDataFactory.password)
+            .append(expectAutoAppend: true)
+
+        // block login-init
+        initialScreen.block(blockedUrl: "/connect/login/init")
+        let loginScreen = profileScreen.signOut()
+        XCTAssertTrue(loginScreen.awaitState(loginStatus: .fallbackFirst), "Login must init in fallback automatically")
+
+        // block login-start
+        initialScreen.block(blockedUrl: "/connect/login/start")
+        loginScreen.navigateToSignUp().navigateToLogin()
+        XCTAssertTrue(initialScreen.awaitState(loginStatus: .passkeyOneTap))
+        loginScreen.switchAccount()
+        loginScreen.loginWithIdentifierButNoSuccess(email: email)
+        XCTAssertTrue(initialScreen.awaitState(loginStatus: .fallbackFirst))
+
+        loginScreen.navigateToSignUp().navigateToLogin()
+
+        // block login-finish
+        initialScreen.block(blockedUrl: "/connect/login/finish")
+        loginScreen.loginWithIdentifierButNoSuccess(email: email)
+        XCTAssertTrue(initialScreen.awaitState(loginStatus: .fallbackFirst, errorMessage: "Passkey error. Use password to log in.", timeout: 5.0))
+        initialScreen.unblock()
+
+        // successfull login
+        loginScreen.navigateToSignUp().navigateToLogin()
+        let profileScreen2 = loginScreen.loginWithIdentifier(email: email).autoSkip()
+        XCTAssertTrue(profileScreen2.visible(timeout: 10.0))
+    }
+     */
+
     /**
      * Wait for a condition to be true with timeout.
      */
@@ -248,16 +378,9 @@ class ConnectExampleUITests {
      * This mirrors the Swift startApp() function.
      */
     private suspend fun startApp(
-        filteredByGradualRollout: Boolean = false,
-        filteredByMissingDeviceSupport: Boolean = false
+        allowedByGradualRollout: Boolean = true
     ): LoginScreen {
-        // Set additional test mode flags if needed
-        if (filteredByGradualRollout) {
-            MainActivity.isFilteredByGradualRollout = true
-        }
-        if (filteredByMissingDeviceSupport) {
-            MainActivity.isFilteredByMissingDeviceSupport = true
-        }
+        composeTestRule.activity.setGradualRollout(allowedByGradualRollout)
 
         // The app should already be started by the compose test rule
         // Create the login screen and wait for it to be visible

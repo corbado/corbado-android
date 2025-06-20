@@ -4,15 +4,25 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
-import androidx.compose.ui.test.assertTextContains
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+
+enum class CorbadoEndpoint(endpoint: String) {
+    LoginInit("/connect/login/init"),
+    LoginStart("/connect/login/start"),
+    LoginFinish("/connect/login/finish"),
+    AppendInit("/connect/append/init"),
+    AppendStart("/connect/append/start"),
+    AppendFinish("/connect/append/finish"),
+    ManageInit("/connect/manage/init"),
+    ManageList("/connect/manage/list"),
+    ManageDelete("/connect/manage/delete"),
+}
 
 /**
  * Base class for all page objects, providing common functionality.
@@ -49,12 +59,12 @@ abstract class BaseScreen(protected val composeTestRule: ComposeTestRule) {
                 try {
                     composeTestRule.onNodeWithTag(tag).assertIsDisplayed()
                     true
-                } catch (e: AssertionError) {
+                } catch (_: AssertionError) {
                     false
                 }
             }
             true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
@@ -68,12 +78,12 @@ abstract class BaseScreen(protected val composeTestRule: ComposeTestRule) {
                 try {
                     composeTestRule.onNodeWithTag(tag).assertIsNotDisplayed()
                     true
-                } catch (e: AssertionError) {
+                } catch (_: AssertionError) {
                     false
                 }
             }
             true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
@@ -91,32 +101,25 @@ abstract class BaseScreen(protected val composeTestRule: ComposeTestRule) {
                 try {
                     composeTestRule.onNodeWithTag(tag).assertIsDisplayed()
                     true
-                } catch (e: AssertionError) {
+                } catch (_: AssertionError) {
                     false
                 }
             }
             // Element is now visible, click it
             composeTestRule.onNodeWithTag(tag).performClick()
             true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
     
-    /**
-     * Wait for a UI element with the given text to be displayed, then click it.
-     * 
-     * @param text The text of the element to wait for and click
-     * @param timeout Timeout in seconds (default: 5.0)
-     * @return true if the element was found and clicked, false if timeout occurred
-     */
     protected fun waitAndGetText(tag: String, timeout: Double = 5.0): String? {
         return try {
             waitForCondition((timeout * 1000).toLong()) {
                 try {
                     composeTestRule.onNodeWithTag(tag).assertIsDisplayed()
                     true
-                } catch (e: AssertionError) {
+                } catch (_: AssertionError) {
                     false
                 }
             }
@@ -124,7 +127,7 @@ abstract class BaseScreen(protected val composeTestRule: ComposeTestRule) {
             // Element is now visible, extract its text content
             val semanticsNode = composeTestRule.onNodeWithTag(tag).fetchSemanticsNode()
             semanticsNode.config.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -143,15 +146,19 @@ abstract class BaseScreen(protected val composeTestRule: ComposeTestRule) {
                 try {
                     composeTestRule.onNodeWithTag(tag).assertIsDisplayed()
                     true
-                } catch (e: AssertionError) {
+                } catch (_: AssertionError) {
                     false
                 }
             }
             // Element is now visible, input text
             composeTestRule.onNodeWithTag(tag).performTextInput(text)
             true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
+    }
+
+    protected suspend fun blockCorbadoEndpoint(endpoint: CorbadoEndpoint) {
+
     }
 } 

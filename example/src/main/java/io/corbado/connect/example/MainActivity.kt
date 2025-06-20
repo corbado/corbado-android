@@ -20,6 +20,7 @@ import androidx.navigation.compose.rememberNavController
 import com.amplifyframework.AmplifyException
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
 import com.amplifyframework.kotlin.core.Amplify
+import io.corbado.connect.example.di.CorbadoService
 import io.corbado.connect.example.ui.Screen
 import io.corbado.connect.example.ui.login.LoginScreen
 import io.corbado.connect.example.ui.postlogin.PostLoginScreen
@@ -29,7 +30,6 @@ import io.corbado.connect.example.ui.totpscreen.TotpSetupScreen
 import io.corbado.connect.example.ui.theme.ConnectExampleTheme
 
 class MainActivity : ComponentActivity() {
-    
     companion object {
         // Static field for virtual authenticator injection during UI tests
         @JvmStatic
@@ -41,12 +41,20 @@ class MainActivity : ComponentActivity() {
         
         @JvmStatic
         var controlServerURL: String? = null
-        
-        @JvmStatic
-        var isFilteredByGradualRollout: Boolean = false
-        
-        @JvmStatic
-        var isFilteredByMissingDeviceSupport: Boolean = false
+    }
+
+    fun setGradualRollout(allowedByGradualRollout: Boolean = true) {
+        val corbado = CorbadoService.getInstance(application)
+        if (allowedByGradualRollout) {
+            corbado.setInvitationToken("inv-token-correct")
+        } else {
+            corbado.setInvitationToken("inv-token-negative")
+        }
+    }
+
+    fun blockCorbadoEndpoint(endpoint: String = "") {
+        val corbado = CorbadoService.getInstance(application)
+        corbado.
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {

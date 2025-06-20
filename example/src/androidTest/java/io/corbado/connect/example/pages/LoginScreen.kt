@@ -6,7 +6,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import io.corbado.connect.example.ui.Screen
 
 /**
  * Page object for the Login Screen, mirroring the Swift LoginScreen implementation.
@@ -123,17 +122,28 @@ class LoginScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRule
             false
         }
     }
-    
-    /**
-     * Wait for a specific login status with optional error message.
-     */
-    fun awaitState(loginStatus: LoginStatus, errorMessage: String, timeout: Double = 5.0): Boolean {
-        return awaitState(loginStatus, timeout) && try {
-            composeTestRule.onNodeWithText(errorMessage).assertIsDisplayed()
+
+    fun awaitErrorMessage(errorMessage: String, timeout: Double = 5.0): Boolean {
+        return try {
+            waitForCondition((timeout * 1000).toLong()) {
+                try {
+                    composeTestRule.onNodeWithText(errorMessage).assertIsDisplayed()
+                    true
+                } catch (e: AssertionError) {
+                    false
+                }
+            }
             true
         } catch (e: Exception) {
             false
         }
+    }
+
+    /**
+     * Wait for a specific login status with optional error message.
+     */
+    fun awaitState(loginStatus: LoginStatus, errorMessage: String, timeout: Double = 5.0): Boolean {
+        return awaitState(loginStatus, timeout) && awaitErrorMessage(errorMessage, timeout)
     }
     
     /**

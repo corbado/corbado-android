@@ -97,6 +97,8 @@ class Corbado(
         clientStateService.setInvitationToken(token)
     }
 
+    fun setApiInterceptor()
+
     fun clearProcess() {
         process = null
     }

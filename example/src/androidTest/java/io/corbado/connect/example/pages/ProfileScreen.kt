@@ -79,9 +79,9 @@ class ProfileScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRu
      */
     fun passkeyAppendPossible(): Boolean {
         return try {
-            composeTestRule.onNodeWithText("Create passkey").assertExists()
+            composeTestRule.onNodeWithTag("CreatePasskeyButton").assertExists()
             true
-        } catch (e: Exception) {
+        } catch (e: AssertionError) {
             false
         }
     }
