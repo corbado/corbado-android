@@ -29,8 +29,25 @@ import io.corbado.connect.example.ui.totpscreen.TotpSetupScreen
 import io.corbado.connect.example.ui.theme.ConnectExampleTheme
 
 class MainActivity : ComponentActivity() {
+    
+    companion object {
+        // Static field for virtual authenticator injection during UI tests
+        @JvmStatic
+        var virtualAuthorizationController: Any? = null
+        
+        // Test mode flags
+        @JvmStatic
+        var isUITestMode: Boolean = false
+        
+        @JvmStatic
+        var controlServerURL: String? = null
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Parse launch arguments for test mode
+        parseLaunchArguments()
 
         (application as? MainApplication)?.initAmplify()
 
@@ -77,6 +94,27 @@ class MainActivity : ComponentActivity() {
                                 TotpSetupScreen(navController)
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+    
+    private fun parseLaunchArguments() {
+        val extras = intent.extras
+        if (extras != null) {
+            for (key in extras.keySet()) {
+                val value = extras.getString(key)
+                Log.d("MainActivity", "Launch argument: $key = $value")
+                
+                when (key) {
+                    "-UITestMode" -> {
+                        isUITestMode = true
+                        Log.i("MainActivity", "UI Test Mode enabled")
+                    }
+                    "-ControlServerURL" -> {
+                        controlServerURL = value
+                        Log.i("MainActivity", "Control Server URL: $value")
                     }
                 }
             }

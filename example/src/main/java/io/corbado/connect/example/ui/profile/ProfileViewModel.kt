@@ -104,8 +104,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     passkeys.value = appendStatus.passkeys
                     listMessage.value = if (appendStatus.passkeys.isEmpty()) "There is currently no passkey saved for this account." else null
                 }
-                else -> {
+                is ConnectManageStatus.PasskeyOperationCancelled -> {
+                    errorMessage.value = "Passkey append cancelled."
+                }
+                is ConnectManageStatus.Error -> {
                     errorMessage.value = "Passkey creation failed. Please try again later."
+                }
+                is ConnectManageStatus.PasskeyOperationExcludeCredentialsMatch -> {
+                    errorMessage.value = "You already have a passkey that can be used on this device."
                 }
             }
         }

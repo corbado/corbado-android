@@ -72,6 +72,7 @@ class Corbado(
     private val projectId: String,
     private val context: Context,
     private val frontendApiUrlSuffix: String? = null,
+    private val authorizationController: AuthorizationController? = null,
     internal val useOneTap: Boolean = true
 ) {
     internal val client: CorbadoClient
@@ -84,7 +85,7 @@ class Corbado(
     init {
         client = CorbadoClient(projectId, frontendApiUrlSuffix)
         clientStateService = ClientStateService(context, projectId)
-        authController = RealAuthorizationController(context)
+        authController = authorizationController ?: RealAuthorizationController(context)
     }
 
     // Control methods

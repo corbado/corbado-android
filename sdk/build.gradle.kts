@@ -35,7 +35,7 @@ android {
 
 dependencies {
     implementation(project(":api"))
-    implementation("io.corbado:simple-credential-manager:1.0.0-SNAPSHOT")
+    implementation("io.corbado:simple-credential-manager:1.0.0")
     implementation(libs.okhttp)
 
     // Serialization for JSON handling

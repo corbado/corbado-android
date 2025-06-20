@@ -1,6 +1,6 @@
 [versions]
 android-gradle-plugin = "8.5.2"
-kotlin = "1.9.22"
+kotlin = "2.1.0"
 android-compileSdk = "34"
 android-minSdk = "26"
 androidx-core-ktx = "1.12.0"
@@ -28,5 +28,6 @@ simple-credential-manager = { module = "io.corbado:simple-credential-manager" }
 android-application = { id = "com.android.application", version.ref = "android-gradle-plugin" }
 jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+jetbrains-kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 
 [bundles] 

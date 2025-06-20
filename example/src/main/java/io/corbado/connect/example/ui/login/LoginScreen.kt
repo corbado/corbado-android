@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -37,9 +38,14 @@ fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = v
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag("LoginScreen"),
+        contentAlignment = Alignment.Center
+    ) {
         when (status) {
-            LoginStatus.Loading -> CircularProgressIndicator()
+            LoginStatus.Loading -> CircularProgressIndicator(modifier = Modifier.testTag("LoadingIndicator"))
             LoginStatus.FallbackFirst -> FallbackLoginView(loginViewModel, navController)
             LoginStatus.FallbackSecondTOTP -> FallbackTOTPView(loginViewModel)
             LoginStatus.FallbackSecondSMS -> FallbackSMSView(loginViewModel)
@@ -69,7 +75,9 @@ fun FallbackLoginView(viewModel: LoginViewModel, navController: NavController) {
             value = email,
             onValueChange = { viewModel.email.value = it },
             label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("EmailTextField")
         )
 
         OutlinedTextField(
@@ -77,7 +85,9 @@ fun FallbackLoginView(viewModel: LoginViewModel, navController: NavController) {
             onValueChange = { viewModel.password.value = it },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("PasswordTextField")
         )
 
         errorMessage?.let {
@@ -87,12 +97,14 @@ fun FallbackLoginView(viewModel: LoginViewModel, navController: NavController) {
         CorbadoPrimaryButton(
             text = "Login",
             onClick = { viewModel.loginWithEmailAndPassword() },
-            isLoading = isLoading
+            isLoading = isLoading,
+            modifier = Modifier.testTag("LoginButton")
         )
 
         CorbadoSecondaryButton(
             text = "Sign Up",
-            onClick = { navController.navigate(Screen.SignUp.route) }
+            onClick = { navController.navigate(Screen.SignUp.route) },
+            modifier = Modifier.testTag("SignUpButton")
         )
     }
 }
@@ -188,12 +200,14 @@ fun PasskeyTextFieldView(viewModel: LoginViewModel, navController: NavController
         CorbadoPrimaryButton(
             text = "Login with Passkey",
             onClick = { viewModel.loginWithPasskeyTextField() },
-            isLoading = isLoading
+            isLoading = isLoading,
+            modifier = Modifier.testTag("LoginWithPasskeyButton")
         )
 
         CorbadoSecondaryButton(
             text = "Sign Up",
-            onClick = { navController.navigate(Screen.SignUp.route) }
+            onClick = { navController.navigate(Screen.SignUp.route) },
+            modifier = Modifier.testTag("SignUpButton")
         )
     }
 }
@@ -218,17 +232,20 @@ fun PasskeyOneTapView(viewModel: LoginViewModel, navController: NavController) {
         CorbadoPrimaryButton(
             text = "Login as ${truncateEmail(email, 30)}",
             onClick = { viewModel.loginWithPasskeyOneTap() },
-            isLoading = isLoading
+            isLoading = isLoading,
+            modifier = Modifier.testTag("LoginOneTapButton")
         )
 
         CorbadoSecondaryButton(
             text = "Switch account",
-            onClick = { viewModel.discardPasskeyOneTap() }
+            onClick = { viewModel.discardPasskeyOneTap() },
+            modifier = Modifier.testTag("SwitchAccountButton")
         )
 
         CorbadoSecondaryButton(
             text = "Sign Up",
-            onClick = { navController.navigate(Screen.SignUp.route) }
+            onClick = { navController.navigate(Screen.SignUp.route) },
+            modifier = Modifier.testTag("SignUpButton")
         )
     }
 }

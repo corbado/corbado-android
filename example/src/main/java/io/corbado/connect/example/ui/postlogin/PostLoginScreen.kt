@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -38,9 +39,14 @@ fun PostLoginScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag("PostLoginScreen"),
+        contentAlignment = Alignment.Center
+    ) {
         when (val s = state) {
-            PostLoginStatus.Loading -> CircularProgressIndicator()
+            PostLoginStatus.Loading -> CircularProgressIndicator(modifier = Modifier.testTag("LoadingIndicator"))
             PostLoginStatus.PasskeyAppend -> PasskeyAppendView(postLoginViewModel)
             is PostLoginStatus.PasskeyAppended -> PasskeyAppendedView(postLoginViewModel, s.aaguidName)
         }
@@ -88,12 +94,14 @@ fun PasskeyAppendView(viewModel: PostLoginViewModel) {
         CorbadoPrimaryButton(
             text = "Create passkey",
             onClick = { viewModel.createPasskey() },
-            isLoading = isLoading
+            isLoading = isLoading,
+            modifier = Modifier.testTag("CreatePasskeyButton")
         )
 
         CorbadoSecondaryButton(
             text = "Skip",
-            onClick = { viewModel.skipPasskeyCreation() }
+            onClick = { viewModel.skipPasskeyCreation() },
+            modifier = Modifier.testTag("SkipPasskeyButton")
         )
     }
 }
@@ -116,7 +124,8 @@ fun PasskeyAppendedView(viewModel: PostLoginViewModel, aaguidName: String?) {
         }
         CorbadoPrimaryButton(
             text = "Continue",
-            onClick = { viewModel.navigateAfterPasskeyAppend() }
+            onClick = { viewModel.navigateAfterPasskeyAppend() },
+            modifier = Modifier.testTag("ContinueButton")
         )
     }
 } 

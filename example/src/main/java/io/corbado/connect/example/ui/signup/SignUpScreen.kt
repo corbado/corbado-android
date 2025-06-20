@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -35,7 +36,8 @@ fun SignUpScreen(navController: NavController, signUpViewModel: SignUpViewModel 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .testTag("SignUpScreen"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -45,14 +47,18 @@ fun SignUpScreen(navController: NavController, signUpViewModel: SignUpViewModel 
             value = email,
             onValueChange = { signUpViewModel.email.value = it },
             label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("SignUpEmailTextField")
         )
 
         OutlinedTextField(
             value = phoneNumber,
             onValueChange = { signUpViewModel.phoneNumber.value = it },
             label = { Text("Phone Number") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("SignUpPhoneTextField")
         )
 
         OutlinedTextField(
@@ -60,7 +66,9 @@ fun SignUpScreen(navController: NavController, signUpViewModel: SignUpViewModel 
             onValueChange = { signUpViewModel.password.value = it },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("SignUpPasswordTextField")
         )
 
         errorMessage?.let {
@@ -70,7 +78,8 @@ fun SignUpScreen(navController: NavController, signUpViewModel: SignUpViewModel 
         CorbadoPrimaryButton(
             text = "Sign Up",
             onClick = { signUpViewModel.signUp() },
-            isLoading = isLoading
+            isLoading = isLoading,
+            modifier = Modifier.testTag("SignUpSubmitButton")
         )
 
         CorbadoSecondaryButton(

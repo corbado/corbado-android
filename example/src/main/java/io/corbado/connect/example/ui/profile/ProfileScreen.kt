@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -42,14 +43,15 @@ fun ProfileScreen(navController: NavController, profileViewModel: ProfileViewMod
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .testTag("ProfileScreen"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(30.dp)
     ) {
         Text("Profile", style = MaterialTheme.typography.headlineMedium)
 
         if (isLoading) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(modifier = Modifier.testTag("LoadingIndicator"))
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("General", style = MaterialTheme.typography.headlineSmall)
@@ -75,6 +77,7 @@ fun ProfileScreen(navController: NavController, profileViewModel: ProfileViewMod
 
                 CorbadoSecondaryButton(
                     text = "Logout",
+                    modifier = Modifier.testTag("LogoutButton"),
                     onClick = { profileViewModel.signOut() }
                 )
             }
@@ -83,7 +86,7 @@ fun ProfileScreen(navController: NavController, profileViewModel: ProfileViewMod
                 Text("Passkeys", style = MaterialTheme.typography.headlineSmall)
 
                 errorMessage?.let {
-                    Text(text = it, color = MaterialTheme.colorScheme.error)
+                    Text(text = it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("ErrorMessage"))
                 }
 
                 listMessage?.let {
@@ -97,6 +100,7 @@ fun ProfileScreen(navController: NavController, profileViewModel: ProfileViewMod
                 if (passkeyAppendAllowed) {
                     CorbadoPrimaryButton(
                         text = "Create passkey",
+                        modifier = Modifier.testTag("CreatePasskeyButton"),
                         onClick = { profileViewModel.appendPasskey() }
                     )
                 }

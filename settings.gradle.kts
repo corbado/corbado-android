@@ -21,5 +21,6 @@ include(":example")
 includeBuild("../simple-credential-manager") {
     dependencySubstitution {
         substitute(module("io.corbado:simple-credential-manager")).using(project(":library"))
+        substitute(module("io.corbado:simple-credential-manager-mocks")).using(project(":library-mocks"))
     }
 } 
