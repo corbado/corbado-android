@@ -5,11 +5,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import io.corbado.connect.example.R
 import io.corbado.connect.example.ui.Screen
 
 @Composable
@@ -272,8 +275,12 @@ fun PasskeyErrorSoftView(viewModel: LoginViewModel) {
             textAlign = TextAlign.Center
         )
 
-        // Placeholder for the passkey image
-        Box(modifier = Modifier.size(120.dp))
+        Icon(
+            painter = painterResource(id = R.drawable.ic_passkey_encourage),
+            contentDescription = "Passkey Encourage",
+            modifier = Modifier.size(250.dp),
+            tint = Color.Unspecified
+        )
 
         Text(
             text = "Your device will ask you for your fingerprint, face or screen lock.",
@@ -314,8 +321,12 @@ fun PasskeyErrorHardView(viewModel: LoginViewModel) {
             textAlign = TextAlign.Center
         )
 
-        // Placeholder for the passkey error image
-        Box(modifier = Modifier.size(120.dp))
+        Icon(
+            painter = painterResource(id = R.drawable.ic_passkey_error),
+            contentDescription = "Passkey Error",
+            modifier = Modifier.size(120.dp),
+            tint = Color.Unspecified
+        )
 
         Text(
             text = "Login with passkeys was not possible.",

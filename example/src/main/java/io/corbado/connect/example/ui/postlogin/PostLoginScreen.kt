@@ -8,10 +8,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import io.corbado.connect.example.R
 import io.corbado.connect.example.ui.login.NavigationEvent
 
 @Composable
@@ -34,10 +37,10 @@ fun PostLoginScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        when (state) {
+        when (val s = state) {
             PostLoginStatus.Loading -> CircularProgressIndicator()
             PostLoginStatus.PasskeyAppend -> PasskeyAppendView(postLoginViewModel)
-            PostLoginStatus.PasskeyAppended -> PasskeyAppendedView(postLoginViewModel)
+            is PostLoginStatus.PasskeyAppended -> PasskeyAppendedView(postLoginViewModel, s.aaguidName)
         }
     }
 }
@@ -67,8 +70,12 @@ fun PasskeyAppendView(viewModel: PostLoginViewModel) {
             Text(it, color = MaterialTheme.colorScheme.error)
         }
 
-        // Placeholder for passkey image
-        Box(modifier = Modifier.size(120.dp))
+        Icon(
+            painter = painterResource(id = R.drawable.ic_passkey_encourage),
+            contentDescription = "Passkey Encourage",
+            modifier = Modifier.size(250.dp),
+            tint = Color.Unspecified
+        )
 
         Text(
             "Sign in easily now with your fingerprint, face, or PIN. Sync across your devices.",
@@ -95,13 +102,21 @@ fun PasskeyAppendView(viewModel: PostLoginViewModel) {
 }
 
 @Composable
-fun PasskeyAppendedView(viewModel: PostLoginViewModel) {
+fun PasskeyAppendedView(viewModel: PostLoginViewModel, aaguidName: String?) {
     Column(
         modifier = Modifier.padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_passkey_success),
+            contentDescription = "Passkey Success",
+            modifier = Modifier.size(120.dp),
+        )
         Text("Passkey Created Successfully", style = MaterialTheme.typography.headlineMedium)
+        if (aaguidName != null) {
+            Text("Your passkey is stored in $aaguidName.")
+        }
         Button(onClick = { viewModel.navigateAfterPasskeyAppend() }) {
             Text("Continue")
         }

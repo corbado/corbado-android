@@ -22,15 +22,15 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-enum class PostLoginStatus {
-    Loading,
-    PasskeyAppend,
-    PasskeyAppended
+sealed class PostLoginStatus {
+    data object Loading: PostLoginStatus()
+    data object PasskeyAppend: PostLoginStatus()
+    data class PasskeyAppended(val aaguidName: String?) : PostLoginStatus()
 }
 
 class PostLoginViewModel(application: Application) : AndroidViewModel(application) {
     private val corbado = CorbadoService.getInstance(application)
-    val state = MutableStateFlow(PostLoginStatus.Loading)
+    val state: MutableStateFlow<PostLoginStatus> = MutableStateFlow(PostLoginStatus.Loading)
     val primaryLoading = MutableStateFlow(false)
     val errorMessage = MutableStateFlow<String?>(null)
 
@@ -79,8 +79,8 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
     fun createPasskey() {
         viewModelScope.launch {
             primaryLoading.value = true
-            when(corbado.completeAppend()) {
-                ConnectAppendStatus.Completed() -> state.value = PostLoginStatus.PasskeyAppended
+            when(val result = corbado.completeAppend()) {
+                is ConnectAppendStatus.Completed -> state.value = PostLoginStatus.PasskeyAppended(result.aaguid)
                 ConnectAppendStatus.Cancelled -> errorMessage.value = "You have cancelled setting up your passkey. Please try again."
                 else -> skipPasskeyCreation()
             }
