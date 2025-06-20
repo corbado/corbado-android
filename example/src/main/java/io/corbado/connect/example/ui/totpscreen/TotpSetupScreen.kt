@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.lightspark.composeqr.QrCodeView
+import io.corbado.connect.example.ui.components.CorbadoPrimaryButton
 import io.corbado.connect.example.ui.login.NavigationEvent
 
 @Composable
@@ -67,12 +68,11 @@ fun TotpSetupScreen(
                 Text(it, color = MaterialTheme.colorScheme.error)
             }
 
-            Button(
+            CorbadoPrimaryButton(
+                text = "Complete",
                 onClick = { totpSetupViewModel.completeSetupTOTP() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Complete")
-            }
+                isLoading = isLoading
+            )
         }
     }
 } 

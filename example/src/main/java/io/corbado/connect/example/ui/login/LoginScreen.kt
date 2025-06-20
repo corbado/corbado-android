@@ -14,6 +14,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import io.corbado.connect.example.R
 import io.corbado.connect.example.ui.Screen
+import io.corbado.connect.example.ui.components.CorbadoPrimaryButton
+import io.corbado.connect.example.ui.components.CorbadoSecondaryButton
 
 @Composable
 fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = viewModel()) {
@@ -82,21 +84,16 @@ fun FallbackLoginView(viewModel: LoginViewModel, navController: NavController) {
             Text(text = it, color = MaterialTheme.colorScheme.error)
         }
 
-        Button(
+        CorbadoPrimaryButton(
+            text = "Login",
             onClick = { viewModel.loginWithEmailAndPassword() },
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-            } else {
-                Text("Login")
-            }
-        }
+            isLoading = isLoading
+        )
 
-        TextButton(onClick = { navController.navigate(Screen.SignUp.route) }) {
-            Text("Don't have an account? Sign Up")
-        }
+        CorbadoSecondaryButton(
+            text = "Sign Up",
+            onClick = { navController.navigate(Screen.SignUp.route) }
+        )
     }
 }
 
@@ -124,17 +121,11 @@ fun FallbackTOTPView(viewModel: LoginViewModel) {
             Text(text = it, color = MaterialTheme.colorScheme.error)
         }
 
-        Button(
+        CorbadoPrimaryButton(
+            text = "Submit",
             onClick = { viewModel.verifyTOTP(code) },
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-            } else {
-                Text("Submit")
-            }
-        }
+            isLoading = isLoading
+        )
     }
 }
 
@@ -162,17 +153,11 @@ fun FallbackSMSView(viewModel: LoginViewModel) {
             Text(text = it, color = MaterialTheme.colorScheme.error)
         }
 
-        Button(
+        CorbadoPrimaryButton(
+            text = "Submit",
             onClick = { viewModel.verifySMS(code) },
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-            } else {
-                Text("Submit")
-            }
-        }
+            isLoading = isLoading
+        )
     }
 }
 
@@ -200,21 +185,16 @@ fun PasskeyTextFieldView(viewModel: LoginViewModel, navController: NavController
             Text(text = it, color = MaterialTheme.colorScheme.error)
         }
 
-        Button(
+        CorbadoPrimaryButton(
+            text = "Login with Passkey",
             onClick = { viewModel.loginWithPasskeyTextField() },
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-            } else {
-                Text("Login with Passkey")
-            }
-        }
+            isLoading = isLoading
+        )
 
-        TextButton(onClick = { navController.navigate(Screen.SignUp.route) }) {
-            Text("Don't have an account? Sign Up")
-        }
+        CorbadoSecondaryButton(
+            text = "Sign Up",
+            onClick = { navController.navigate(Screen.SignUp.route) }
+        )
     }
 }
 
@@ -235,28 +215,21 @@ fun PasskeyOneTapView(viewModel: LoginViewModel, navController: NavController) {
             Text(text = it, color = MaterialTheme.colorScheme.error)
         }
 
-        Button(
+        CorbadoPrimaryButton(
+            text = "Login as ${truncateEmail(email, 30)}",
             onClick = { viewModel.loginWithPasskeyOneTap() },
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-            } else {
-                Text("Login as $email")
-            }
-        }
+            isLoading = isLoading
+        )
 
-        Button(
-            onClick = { viewModel.discardPasskeyOneTap() },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Switch account")
-        }
+        CorbadoSecondaryButton(
+            text = "Switch account",
+            onClick = { viewModel.discardPasskeyOneTap() }
+        )
 
-        TextButton(onClick = { navController.navigate(Screen.SignUp.route) }) {
-            Text("Don't have an account? Sign Up")
-        }
+        CorbadoSecondaryButton(
+            text = "Sign Up",
+            onClick = { navController.navigate(Screen.SignUp.route) }
+        )
     }
 }
 
@@ -288,21 +261,16 @@ fun PasskeyErrorSoftView(viewModel: LoginViewModel) {
             textAlign = TextAlign.Center
         )
 
-        Button(
+        CorbadoPrimaryButton(
+            text = "Continue",
             onClick = { viewModel.loginWithPasskeyOneTap() },
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-            } else {
-                Text("Continue")
-            }
-        }
+            isLoading = isLoading
+        )
 
-        TextButton(onClick = { viewModel.discardPasskeyLogin() }) {
-            Text("Use password instead")
-        }
+        CorbadoSecondaryButton(
+            text = "Use password instead",
+            onClick = { viewModel.discardPasskeyLogin() }
+        )
     }
 }
 
@@ -334,20 +302,23 @@ fun PasskeyErrorHardView(viewModel: LoginViewModel) {
             textAlign = TextAlign.Center
         )
 
-        Button(
+        CorbadoPrimaryButton(
+            text = "Try again",
             onClick = { viewModel.loginWithPasskeyOneTap() },
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-            } else {
-                Text("Try again")
-            }
-        }
+            isLoading = isLoading
+        )
 
-        TextButton(onClick = { viewModel.discardPasskeyLogin() }) {
-            Text("Skip passkey login")
-        }
+        CorbadoSecondaryButton(
+            text = "Skip passkey login",
+            onClick = { viewModel.discardPasskeyLogin() }
+        )
     }
-} 
+}
+
+private fun truncateEmail(email: String, maxLength: Int): String {
+    return if (email.length > maxLength) {
+        "${email.take(maxLength / 2)}...${email.takeLast(maxLength / 2)}"
+    } else {
+        email
+    }
+}

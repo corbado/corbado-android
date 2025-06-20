@@ -15,6 +15,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import io.corbado.connect.example.R
+import io.corbado.connect.example.ui.components.CorbadoPrimaryButton
+import io.corbado.connect.example.ui.components.CorbadoSecondaryButton
 import io.corbado.connect.example.ui.login.NavigationEvent
 
 @Composable
@@ -83,21 +85,16 @@ fun PasskeyAppendView(viewModel: PostLoginViewModel) {
             textAlign = TextAlign.Center
         )
 
-        Button(
+        CorbadoPrimaryButton(
+            text = "Create passkey",
             onClick = { viewModel.createPasskey() },
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-            } else {
-                Text("Create passkey")
-            }
-        }
+            isLoading = isLoading
+        )
 
-        TextButton(onClick = { viewModel.skipPasskeyCreation() }) {
-            Text("Skip")
-        }
+        CorbadoSecondaryButton(
+            text = "Skip",
+            onClick = { viewModel.skipPasskeyCreation() }
+        )
     }
 }
 
@@ -117,8 +114,9 @@ fun PasskeyAppendedView(viewModel: PostLoginViewModel, aaguidName: String?) {
         if (aaguidName != null) {
             Text("Your passkey is stored in $aaguidName.")
         }
-        Button(onClick = { viewModel.navigateAfterPasskeyAppend() }) {
-            Text("Continue")
-        }
+        CorbadoPrimaryButton(
+            text = "Continue",
+            onClick = { viewModel.navigateAfterPasskeyAppend() }
+        )
     }
 } 

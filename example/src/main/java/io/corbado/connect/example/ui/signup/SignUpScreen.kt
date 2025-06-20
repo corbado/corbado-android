@@ -10,6 +10,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import io.corbado.connect.example.ui.Screen
+import io.corbado.connect.example.ui.components.CorbadoPrimaryButton
+import io.corbado.connect.example.ui.components.CorbadoSecondaryButton
 import io.corbado.connect.example.ui.login.NavigationEvent
 
 @Composable
@@ -65,27 +67,20 @@ fun SignUpScreen(navController: NavController, signUpViewModel: SignUpViewModel 
             Text(text = it, color = MaterialTheme.colorScheme.error)
         }
 
-        Button(
+        CorbadoPrimaryButton(
+            text = "Sign Up",
             onClick = { signUpViewModel.signUp() },
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-            } else {
-                Text("Sign Up")
-            }
-        }
+            isLoading = isLoading
+        )
 
-        Button(
-            onClick = { signUpViewModel.autoFill() },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("AutoFill")
-        }
+        CorbadoSecondaryButton(
+            text = "AutoFill",
+            onClick = { signUpViewModel.autoFill() }
+        )
 
-        TextButton(onClick = { navController.navigate(Screen.Login.route) }) {
-            Text("Already have an account? Log In")
-        }
+        CorbadoSecondaryButton(
+            text = "Already have an account? Log In",
+            onClick = { navController.navigate(Screen.Login.route) }
+        )
     }
 } 
