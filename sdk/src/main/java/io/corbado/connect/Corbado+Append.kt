@@ -15,7 +15,7 @@ enum class AppendType {
 }
 
 sealed class ConnectAppendStatus {
-    data object Completed : ConnectAppendStatus()
+    data class Completed(val aaguid: String?, var iconLight: String?, val iconDark: String?) : ConnectAppendStatus()
     data object Cancelled : ConnectAppendStatus()
     data object ExcludeCredentialsMatch : ConnectAppendStatus()
     data object Error : ConnectAppendStatus()
@@ -73,7 +73,8 @@ suspend fun Corbado.completeAppend(): ConnectAppendStatus = withContext(Dispatch
             clientStateService.setLastLogin(lastLogin)
         }
 
-        return@withContext ConnectAppendStatus.Completed
+        val details = finishRsp.passkeyOperation.aaguidDetails
+        return@withContext ConnectAppendStatus.Completed(details?.name, details?.iconLight, details?.iconDark)
     } catch (e: AuthorizationError) {
         return@withContext when(e) {
             AuthorizationError.Cancelled -> ConnectAppendStatus.Cancelled

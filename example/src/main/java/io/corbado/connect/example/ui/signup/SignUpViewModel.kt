@@ -7,6 +7,7 @@ import com.amplifyframework.auth.AuthUserAttribute
 import com.amplifyframework.auth.AuthUserAttributeKey
 import com.amplifyframework.auth.options.AuthSignUpOptions
 import com.amplifyframework.kotlin.core.Amplify
+import io.corbado.connect.example.ui.Screen
 import io.corbado.connect.example.ui.login.NavigationEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,7 +44,7 @@ class SignUpViewModel(application: Application) : AndroidViewModel(application) 
 
                 val result = Amplify.Auth.signIn(email.value, password.value)
                 if (result.isSignedIn) {
-                    _navigationEvents.emit(NavigationEvent.NavigateTo("profile"))
+                    _navigationEvents.emit(NavigationEvent.NavigateTo(Screen.PostLogin.route))
                 } else {
                     // This case is not handled in this example
                 }

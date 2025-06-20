@@ -185,7 +185,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val result = Amplify.Auth.confirmSignIn(code)
                 if (result.isSignedIn) {
-                    _navigationEvents.emit(NavigationEvent.NavigateTo(Screen.Profile.route))
+                    _navigationEvents.emit(NavigationEvent.NavigateTo(Screen.PostLogin.route))
                 }
             } catch (error: AuthException) {
                 errorMessage.value = error.message
@@ -203,7 +203,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val result = Amplify.Auth.confirmSignIn(code)
                 if (result.isSignedIn) {
-                    _navigationEvents.emit(NavigationEvent.NavigateTo(Screen.Profile.route))
+                    _navigationEvents.emit(NavigationEvent.NavigateTo(Screen.PostLogin.route))
                 }
             } catch (error: AuthException) {
                 errorMessage.value = error.message

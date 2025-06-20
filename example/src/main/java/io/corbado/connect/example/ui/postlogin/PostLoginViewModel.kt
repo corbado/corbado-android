@@ -80,7 +80,7 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             primaryLoading.value = true
             when(corbado.completeAppend()) {
-                ConnectAppendStatus.Completed -> state.value = PostLoginStatus.PasskeyAppended
+                ConnectAppendStatus.Completed() -> state.value = PostLoginStatus.PasskeyAppended
                 ConnectAppendStatus.Cancelled -> errorMessage.value = "You have cancelled setting up your passkey. Please try again."
                 else -> skipPasskeyCreation()
             }
