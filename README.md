@@ -11,7 +11,6 @@ This SDK simplifies the entire authentication flow, from user registration and l
 
 - **Passwordless Authentication**: End-to-end passkey authentication flows (registration and login).
 - **Simple Integration**: A clean, modern, and Kotlin-idiomatic API.
-- **State Management**: Built-in session and process management to handle the authentication lifecycle.
 - **Native Experience**: Deep integration with Android's `CredentialManager` for a consistent and secure user experience.
 - **UI Components**: A set of ready-to-use Jetpack Compose UI components for building login and signup screens quickly (available in the `example` app).
 - **Customizable**: Flexible architecture that allows for customization of the UI and authentication flows.
