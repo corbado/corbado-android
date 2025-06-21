@@ -2,6 +2,7 @@
 
 [![Platform](https://img.shields.io/badge/Platform-Android-brightgreen.svg)](https://www.android.com)
 [![API](https://img.shields.io/badge/API-26%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=26)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.1-blue.svg?logo=kotlin)](https://kotlinlang.org)
 
 The Corbado Android SDK provides a simple and powerful way to integrate passwordless authentication using passkeys into your native Android applications. It is designed to offer a seamless, secure, and user-friendly login experience, leveraging the native capabilities of the Android platform through the `CredentialManager` API.
 
