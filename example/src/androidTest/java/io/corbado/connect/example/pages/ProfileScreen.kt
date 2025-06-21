@@ -97,24 +97,14 @@ class ProfileScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRu
      * Get list message if displayed.
      */
     fun getListMessage(): String? {
-        return try {
-            composeTestRule.onNodeWithText("We were unable to show your list of passkeys due to an error. Try again later.").assertExists()
-            "We were unable to show your list of passkeys due to an error. Try again later."
-        } catch (e: Exception) {
-            try {
-                composeTestRule.onNodeWithText("There is currently no passkey saved for this account.").assertExists()
-                "There is currently no passkey saved for this account."
-            } catch (e2: Exception) {
-                null
-            }
-        }
+        return waitAndGetText("ListMessage")
     }
     
     /**
      * Reload the page/refresh data.
      */
     fun reloadPage(): ProfileScreen {
-        waitAndClick("Reload")
+        waitAndClick("ReloadButton")
 
         return ProfileScreen(composeTestRule).also {
             it.visible()

@@ -58,6 +58,7 @@ class MainActivity : ComponentActivity() {
     }
 
     fun resetCorbadoInstance() {
+        CorbadoService.getInstance(application).clearLocalState()
         CorbadoService.resetInstance()
     }
 

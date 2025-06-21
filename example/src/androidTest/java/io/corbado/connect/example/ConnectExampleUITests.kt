@@ -89,9 +89,7 @@ class ConnectExampleUITests {
         val sharedPrefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
         sharedPrefs.edit().clear().apply()
 
-        // Clear any authentication state
         try {
-            // If you're using Amplify Auth, clear its state
             runBlocking {
                 try {
                     com.amplifyframework.kotlin.core.Amplify.Auth.signOut()
@@ -99,11 +97,11 @@ class ConnectExampleUITests {
                     // Ignore errors during cleanup
                 }
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Amplify might not be initialized, ignore
         }
 
-        // Add any other state cleanup here (databases, caches, etc.)
+        composeTestRule.activity.resetCorbadoInstance()
     }
     
     /**
@@ -418,74 +416,41 @@ class ConnectExampleUITests {
         // Block manage-init
         blockCorbadoEndpoint(CorbadoEndpoint.ManageInit)
         val profileScreen2 = profileScreen.reloadPage()
-        profileScreen2.getErrorMessage()
+        assertEquals(profileScreen2.getErrorMessage(), "Unable to access passkeys. Check your connection and try again.")
+        assertEquals(profileScreen2.getListMessage(), "We were unable to show your list of passkeys due to an error. Try again later.")
+
+        // Block manage-list
+        blockCorbadoEndpoint(CorbadoEndpoint.ManageList)
+        val profileScreen3 = profileScreen2.reloadPage()
+        assertEquals(profileScreen3.getErrorMessage(), "Unable to access passkeys. Check your connection and try again.")
+        assertEquals(profileScreen3.getListMessage(), "We were unable to show your list of passkeys due to an error. Try again later.")
+
+        // Block append-start
+        blockCorbadoEndpoint(CorbadoEndpoint.AppendStart)
+        val profileScreen4 = profileScreen3.reloadPage()
+        assertEquals(profileScreen4.countNumberOfPasskeys(), 1, "Should still have 1 passkey after reload")
+        profileScreen4.appendPasskey()
+        assertEquals(profileScreen4.getErrorMessage(), "Passkey creation failed. Please try again later.")
+        assertEquals(profileScreen4.countNumberOfPasskeys(), 1, "Should still have 1 passkey after failed append")
+
+        // Block append-finish (we have to delete the passkey first, otherwise we get an excludeCredentials error)
+        profileScreen4.deletePasskey(passkeyId = profileScreen4.getPasskeyIds()[0], complete = true)
+        waitForCondition { profileScreen4.countNumberOfPasskeys() == 0 }
+        blockCorbadoEndpoint(CorbadoEndpoint.AppendFinish)
+        val profileScreen5 = profileScreen4.reloadPage()
+        profileScreen5.appendPasskey()
+        assertEquals(profileScreen5.getErrorMessage(), "Passkey creation failed. Please try again later.")
+        assertEquals(profileScreen5.getListMessage(), "There is currently no passkey saved for this account.")
+
+        // Block manage-delete
+        blockCorbadoEndpoint(CorbadoEndpoint.ManageDelete)
+        // Append passkey (to prepare for manage-delete)
+        profileScreen5.appendPasskey()
+        waitForCondition { profileScreen5.countNumberOfPasskeys() == 1 }
+        profileScreen5.deletePasskey(passkeyId = profileScreen5.getPasskeyIds()[0], complete = true)
+        assertEquals(profileScreen5.getErrorMessage(), "Passkey deletion failed. Please try again later.")
+        assertEquals(profileScreen5.getListMessage(), null, "List message should be cleared after deletion error")
     }
-
-    /*
-    func testManageErrorStatesNetworkBlocking() async throws {
-        let initialScreen = try startApp()
-        let email = TestDataFactory.createEmail()
-
-        let profileScreen = try await initialScreen
-            .navigateToSignUp()
-            .signUpWithValidData(email: email, phoneNumber: TestDataFactory.phoneNumber, password: TestDataFactory.password)
-            .append(expectAutoAppend: true)
-
-        XCTAssertTrue(profileScreen.visible(timeout: 10.0))
-        let passkeyCount = profileScreen.countNumberOfPasskeys()
-        XCTAssertEqual(passkeyCount, 1)
-
-        // block manage-init
-        initialScreen.block(blockedUrl: "/connect/manage/init")
-        profileScreen.reloadPage()
-        XCTAssertTrue(profileScreen.visible(timeout: 10.0))
-
-        XCTAssertEqual(profileScreen.getErrorMessage(), "Unable to access passkeys. Check your connection and try again.")
-        XCTAssertEqual(profileScreen.getListMessage(), "We were unable to show your list of passkeys due to an error. Try again later.")
-
-        // block manage-list
-        initialScreen.block(blockedUrl: "/connect/manage/list")
-        profileScreen.reloadPage()
-        XCTAssertTrue(profileScreen.visible(timeout: 10.0))
-
-        XCTAssertEqual(profileScreen.getErrorMessage(), "Unable to access passkeys. Check your connection and try again.")
-        XCTAssertEqual(profileScreen.getListMessage(), "We were unable to show your list of passkeys due to an error. Try again later.")
-
-        // block append-start
-        initialScreen.block(blockedUrl: "/connect/append/start")
-        profileScreen.reloadPage()
-        XCTAssertTrue(profileScreen.visible(timeout: 10.0))
-        XCTAssertEqual(profileScreen.countNumberOfPasskeys(), 1)
-        profileScreen.appendPasskey()
-
-        XCTAssertEqual(profileScreen.getErrorMessage(), "Passkey creation failed. Please try again later.")
-        XCTAssertEqual(profileScreen.countNumberOfPasskeys(), 1)
-
-        // block append-finish (we have to delete the passkey first, otherwise we get an excludeCredentials error)
-        profileScreen.deletePasskey(passkeyId: profileScreen.getPasskeyIds()[0], complete: true)
-        try waitForCondition(timeout: 10) { profileScreen.countNumberOfPasskeys() == 0}
-
-        initialScreen.block(blockedUrl: "/connect/append/finish")
-        profileScreen.reloadPage()
-        XCTAssertTrue(profileScreen.visible(timeout: 10.0))
-        profileScreen.appendPasskey()
-
-        XCTAssertEqual(profileScreen.getErrorMessage(), "Passkey creation failed. Please try again later.")
-        XCTAssertEqual(profileScreen.getListMessage(), "There is currently no passkey saved for this account.")
-
-        // block manage-delete
-        initialScreen.block(blockedUrl: "/connect/manage/delete")
-        // apppend passkey (to prepare for manage-delete)
-        profileScreen.appendPasskey()
-        try waitForCondition(timeout: 10) { profileScreen.countNumberOfPasskeys() == 1}
-
-        profileScreen.deletePasskey(passkeyId: profileScreen.getPasskeyIds()[0], complete: true)
-        XCTAssertEqual(profileScreen.getErrorMessage(), "Passkey deletion failed. Please try again later.")
-        XCTAssertEqual(profileScreen.getListMessage(), nil)
-
-        // block connectTokenProvider
-    }
-     */
 
     /**
      * Wait for a condition to be true with timeout.

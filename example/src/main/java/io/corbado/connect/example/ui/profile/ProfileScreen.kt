@@ -90,7 +90,7 @@ fun ProfileScreen(navController: NavController, profileViewModel: ProfileViewMod
                 }
 
                 listMessage?.let {
-                    Text(it)
+                    Text(it, modifier = Modifier.testTag("ListMessage"))
                 } ?: run {
                     PasskeyList(passkeys, onDeleteClick = { passkeyId ->
                         profileViewModel.deletePasskey(passkeyId)
@@ -107,7 +107,8 @@ fun ProfileScreen(navController: NavController, profileViewModel: ProfileViewMod
 
                 CorbadoSecondaryButton(
                     text = "Reload",
-                    onClick = { profileViewModel.fetchUserData() }
+                    onClick = { profileViewModel.fetchUserData() },
+                    modifier = Modifier.testTag("ReloadButton")
                 )
             }
         }
