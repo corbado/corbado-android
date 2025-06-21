@@ -13,7 +13,7 @@ This SDK simplifies the entire authentication flow, from user registration and l
 - **Passwordless Authentication**: End-to-end passkey authentication flows (registration and login).
 - **Simple Integration**: A clean, modern, and Kotlin-idiomatic API.
 - **Native Experience**: Deep integration with Android's `CredentialManager` for a consistent and secure user experience.
-- **UI Components**: A set of ready-to-use Jetpack Compose UI components for building login and signup screens quickly (available in the `example` app).
+- **Example UI**: A full sample application built with Jetpack Compose that demonstrates how to integrate the SDK.
 - **Customizable**: Flexible architecture that allows for customization of the UI and authentication flows.
 
 ## 🏗️ Architecture
@@ -223,7 +223,7 @@ fun PostLoginScreen(corbado: Corbado) {
 
 The `:example` module provides a comprehensive, hands-on demonstration of the SDK's capabilities. We highly recommend exploring it to see best practices for:
 
--   Building login, sign-up, and profile screens with Jetpack Compose.
+-   Building login and profile screens with Jetpack Compose.
 -   Handling navigation in an authentication-based app.
 -   Managing user sessions and passkeys.
 -   Implementing ViewModel patterns with the Corbado SDK.
@@ -233,5 +233,6 @@ To run the example app, simply open the project in Android Studio and run the `e
 ## ✅ Requirements
 
 -   Android API Level 26 + (Android 8.0)
--   Jetpack Compose
 -   Kotlin 2.1 (or newer)
+
+*Note: The SDK itself has no dependency on any specific UI toolkit. The example application is built with Jetpack Compose, but you are free to use the SDK with traditional Android Views or any other UI framework.*
