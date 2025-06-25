@@ -15,49 +15,66 @@ enum class AppendType {
 }
 
 sealed class ConnectAppendStatus {
-    data class Completed(val aaguid: String?, var iconLight: String?, val iconDark: String?) : ConnectAppendStatus()
+    data class Completed(val passkeyDetails: PasskeyDetails?) :
+        ConnectAppendStatus()
+
     data object Cancelled : ConnectAppendStatus()
     data object ExcludeCredentialsMatch : ConnectAppendStatus()
     data object Error : ConnectAppendStatus()
+
+    data class PasskeyDetails(
+        val aaguidName: String,
+        val iconLight: String,
+        val iconDark: String
+    )
 }
 
 // Append methods
-suspend fun Corbado.isAppendAllowed(connectTokenProvider: suspend () -> String): ConnectAppendStep = withContext(Dispatchers.IO) {
-    val appendInitLoaded = System.currentTimeMillis()
+suspend fun Corbado.isAppendAllowed(connectTokenProvider: suspend (ConnectTokenType) -> String): ConnectAppendStep =
+    withContext(Dispatchers.IO) {
+        val appendInitLoaded = System.currentTimeMillis()
 
-    try {
-        // We will implement buildClientInfo() later
-        val initRes = client.appendInit(buildClientInfo(), clientStateService.getInvitationToken()?.data)
-        val appendData = ConnectAppendInitData(
-            appendAllowed = initRes.appendAllowed,
-            expiresAt = initRes.expiresAt
-        )
+        try {
+            // We will implement buildClientInfo() later
+            val initRes =
+                client.appendInit(buildClientInfo(), clientStateService.getInvitationToken()?.data)
+            val appendData = ConnectAppendInitData(
+                appendAllowed = initRes.appendAllowed,
+                expiresAt = initRes.expiresAt
+            )
 
-        val p = process?.let {
-            it.appendData = appendData
-            it
-        } ?: ConnectProcess(
-            id = initRes.processID,
-            frontendApiUrl = initRes.frontendApiUrl,
-            appendData = appendData,
-        )
-        process = p
-        client.setProcessId(p.id)
+            val p = process?.let {
+                it.appendData = appendData
+                it
+            } ?: ConnectProcess(
+                id = initRes.processID,
+                frontendApiUrl = initRes.frontendApiUrl,
+                appendData = appendData,
+            )
+            process = p
+            client.setProcessId(p.id)
 
-        if (!appendData.appendAllowed) {
+            if (!appendData.appendAllowed) {
+                return@withContext ConnectAppendStep.Skip
+            }
+
+            val connectToken = connectTokenProvider(ConnectTokenType.PasskeyAppend)
+            val startRsp = client.appendStart(
+                connectToken = connectToken,
+                forcePasskeyAppend = false,
+                loadedMs = appendInitLoaded
+            )
+            val options = startRsp.options ?: return@withContext ConnectAppendStep.Skip
+            p.attestationOptions = authController.serializeCreatePublicKeyCredentialRequest(options)
+
+            return@withContext ConnectAppendStep.AskUserForAppend(
+                startRsp.autoAppend,
+                AppendType.DefaultAppend
+            )
+        } catch (e: Exception) {
             return@withContext ConnectAppendStep.Skip
         }
-
-        val connectToken = connectTokenProvider()
-        val startRsp = client.appendStart(connectToken = connectToken, forcePasskeyAppend = false, loadedMs = appendInitLoaded)
-        val options = startRsp.options ?: return@withContext ConnectAppendStep.Skip
-        p.attestationOptions = authController.serializeCreatePublicKeyCredentialRequest(options)
-
-        return@withContext ConnectAppendStep.AskUserForAppend(startRsp.autoAppend, AppendType.DefaultAppend)
-    } catch (e: Exception) {
-        return@withContext ConnectAppendStep.Skip
     }
-}
 
 suspend fun Corbado.completeAppend(): ConnectAppendStatus = withContext(Dispatchers.IO) {
     val p = process ?: return@withContext ConnectAppendStatus.Error
@@ -65,7 +82,8 @@ suspend fun Corbado.completeAppend(): ConnectAppendStatus = withContext(Dispatch
 
     try {
         val authenticatorResponse = authController.createPasskey(attestationOptions)
-        val typedAuthenticatorResponse = authController.typeCreatePublicKeyCredentialResponse(authenticatorResponse)
+        val typedAuthenticatorResponse =
+            authController.typeCreatePublicKeyCredentialResponse(authenticatorResponse)
         val finishRsp = client.appendFinish(typedAuthenticatorResponse)
 
         finishRsp.passkeyOperation.let {
@@ -73,10 +91,16 @@ suspend fun Corbado.completeAppend(): ConnectAppendStatus = withContext(Dispatch
             clientStateService.setLastLogin(lastLogin)
         }
 
-        val details = finishRsp.passkeyOperation.aaguidDetails
-        return@withContext ConnectAppendStatus.Completed(details?.name, details?.iconLight, details?.iconDark)
+        val passkeyDetails = finishRsp.passkeyOperation.aaguidDetails?.let {
+            ConnectAppendStatus.PasskeyDetails(
+                aaguidName = it.name,
+                iconLight = it.iconLight,
+                iconDark = it.iconDark
+            )
+        }
+        return@withContext ConnectAppendStatus.Completed(passkeyDetails)
     } catch (e: AuthorizationError) {
-        return@withContext when(e) {
+        return@withContext when (e) {
             AuthorizationError.Cancelled -> ConnectAppendStatus.Cancelled
             AuthorizationError.ExcludeCredentialsMatch -> ConnectAppendStatus.ExcludeCredentialsMatch
             else -> ConnectAppendStatus.Error

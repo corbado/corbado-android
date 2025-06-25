@@ -7,7 +7,6 @@ import com.amplifyframework.auth.AuthException
 import com.amplifyframework.auth.cognito.options.AWSCognitoAuthSignInOptions
 import com.amplifyframework.auth.cognito.options.AuthFlowType
 import com.amplifyframework.auth.result.step.AuthSignInStep
-import io.corbado.connect.ConnectLoginStatus
 import io.corbado.connect.ConnectLoginStep
 import io.corbado.connect.Corbado
 import io.corbado.connect.clearOneTap
@@ -23,6 +22,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.amplifyframework.kotlin.core.Amplify
+import io.corbado.connect.ConnectLoginWithIdentifierStatus
+import io.corbado.connect.ConnectLoginWithoutIdentifierStatus
 
 sealed class NavigationEvent {
     data class NavigateTo(val route: String) : NavigationEvent()
@@ -72,7 +73,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     _status.value = LoginStatus.PasskeyTextField
                     nextStep.challenge?.let {
                         val result = corbado.loginWithoutIdentifier(it)
-                        completePasskeyLogin(result)
+                        completePasskeyLoginWithoutIdentifier(result)
                     }
                 }
 
@@ -84,10 +85,9 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun completePasskeyLogin(result: ConnectLoginStatus) {
-        primaryLoading.value = true
+    private suspend fun completePasskeyLoginWithoutIdentifier(result: ConnectLoginWithoutIdentifierStatus) {
         when (result) {
-            is ConnectLoginStatus.Done -> {
+            is ConnectLoginWithoutIdentifierStatus.Done -> {
                 try {
                     val options = AWSCognitoAuthSignInOptions.builder()
                         .authFlowType(AuthFlowType.CUSTOM_AUTH_WITHOUT_SRP)
@@ -108,13 +108,65 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
 
-            is ConnectLoginStatus.InitFallback -> {
-                errorMessage.value = result.error?.message
+            is ConnectLoginWithoutIdentifierStatus.InitSilentFallback -> {
                 result.username?.let { email.value = it }
                 _status.value = LoginStatus.FallbackFirst
             }
 
-            is ConnectLoginStatus.InitRetry -> {
+            is ConnectLoginWithoutIdentifierStatus.Error -> {
+                errorMessage.value = result.error.message
+                if (result.triggerFallback) {
+                    _status.value = LoginStatus.FallbackFirst
+                } else {
+                    _status.value = LoginStatus.PasskeyTextField
+                }
+
+                result.prefillUsername?.let { email.value = it }
+            }
+
+            is ConnectLoginWithoutIdentifierStatus.Ignore -> {
+                // No action needed, just ignore
+            }
+        }
+        primaryLoading.value = false
+    }
+
+    private suspend fun completePasskeyLoginWithIdentifier(result: ConnectLoginWithIdentifierStatus) {
+        primaryLoading.value = true
+
+        when (result) {
+            is ConnectLoginWithIdentifierStatus.Done -> {
+                try {
+                    val options = AWSCognitoAuthSignInOptions.builder()
+                        .authFlowType(AuthFlowType.CUSTOM_AUTH_WITHOUT_SRP)
+                        .build()
+                    val signInResult = Amplify.Auth.signIn(result.username, null, options)
+                    if (signInResult.nextStep.signInStep == AuthSignInStep.CONFIRM_SIGN_IN_WITH_CUSTOM_CHALLENGE) {
+                        val confirmResult = Amplify.Auth.confirmSignIn(result.session)
+                        if (confirmResult.isSignedIn) {
+                            _navigationEvents.emit(NavigationEvent.NavigateTo(Screen.Profile.route))
+                        } else {
+                            errorMessage.value = "Sign in not complete."
+                        }
+                    } else {
+                        errorMessage.value = "Unexpected sign in step: ${signInResult.nextStep.signInStep}"
+                    }
+                } catch (error: AuthException) {
+                    errorMessage.value = error.message
+                }
+            }
+
+            is ConnectLoginWithIdentifierStatus.Error -> {
+                errorMessage.value = result.error.message
+                if (result.triggerFallback) {
+                    _status.value = LoginStatus.FallbackFirst
+                } else {
+                    _status.value = LoginStatus.PasskeyTextField
+                }
+
+                result.username?.let { email.value = it }
+            }
+            is ConnectLoginWithIdentifierStatus.InitRetry -> {
                 retryCount++
                 if (retryCount > 5) {
                     _status.value = LoginStatus.FallbackFirst
@@ -124,12 +176,12 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     _status.value = LoginStatus.PasskeyErrorSoft
                 }
             }
-
-            is ConnectLoginStatus.InitTextField -> {
-                errorMessage.value = result.error?.message
-                _status.value = LoginStatus.PasskeyTextField
+            is ConnectLoginWithIdentifierStatus.InitSilentFallback -> {
+                result.username?.let { email.value = it }
+                _status.value = LoginStatus.FallbackFirst
             }
         }
+
         primaryLoading.value = false
     }
 
@@ -165,7 +217,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             primaryLoading.value = true
             val result = corbado.loginWithTextField(email.value)
-            completePasskeyLogin(result)
+            completePasskeyLoginWithIdentifier(result)
         }
     }
 
@@ -173,7 +225,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             primaryLoading.value = true
             val result = corbado.loginWithOneTap()
-            completePasskeyLogin(result)
+            completePasskeyLoginWithIdentifier(result)
         }
     }
 

@@ -4,9 +4,35 @@ import androidx.credentials.GetPublicKeyCredentialOption
 import androidx.credentials.PublicKeyCredential
 import com.corbado.api.models.FallbackOperationError
 import io.corbado.simplecredentialmanager.AuthorizationError
-import io.corbado.simplecredentialmanager.PublicKeyCredentialAssertion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+sealed class LoginWithoutIdentifierError(val message: String) {
+    object CorbadoAPIError : LoginWithoutIdentifierError(defaultErrorMessage)
+    object UnHandledError : LoginWithoutIdentifierError(defaultErrorMessage)
+    data class CustomError(val code: String, val messageFromBackend: String) :
+        LoginWithoutIdentifierError(messageFromBackend)
+
+    data class PasskeyDeletedOnServer(val messageFromBackend: String) :
+        LoginWithoutIdentifierError(messageFromBackend)
+
+    data class ProjectIDMismatch(
+        val messageFromBackend: String,
+        val wrongProjectName: String? = null,
+        val correctProjectName: String? = null
+    ) : LoginWithoutIdentifierError(messageFromBackend)
+}
+
+sealed class LoginWithIdentifierError(val message: String) {
+    object CorbadoAPIError : LoginWithIdentifierError(defaultErrorMessage)
+    object UnHandledError : LoginWithIdentifierError(defaultErrorMessage)
+    data class CustomError(val code: String, val messageFromBackend: String) :
+        LoginWithIdentifierError(messageFromBackend)
+
+    object InvalidStateError : LoginWithIdentifierError(defaultErrorMessage)
+
+    object UserNotFound : LoginWithIdentifierError("No account matches that email.")
+}
 
 // Enums and classes for login
 sealed class ConnectLoginStep {
@@ -18,16 +44,40 @@ sealed class ConnectLoginStep {
         ConnectLoginStep()
 }
 
-sealed class ConnectLoginStatus {
-    data class InitFallback(val username: String?, val error: AuthError? = null) :
-        ConnectLoginStatus()
+sealed class ConnectLoginWithIdentifierStatus {
+    data class Done(val session: String, val username: String) : ConnectLoginWithIdentifierStatus()
 
-    data class Done(val session: String, val username: String) : ConnectLoginStatus()
-    data object InitRetry : ConnectLoginStatus()
-    data class InitTextField(val challenge: String?, val error: AuthError? = null) :
-        ConnectLoginStatus()
+    data class Error(
+        val error: LoginWithIdentifierError,
+        val triggerFallback: Boolean,
+        val developerDetails: String,
+        val username: String? = null,
+    ) :
+        ConnectLoginWithIdentifierStatus()
+
+    data class InitRetry(val developerDetails: String) : ConnectLoginWithIdentifierStatus()
+
+    data class InitSilentFallback(val username: String? = null, val developerDetails: String) :
+        ConnectLoginWithIdentifierStatus()
 }
 
+sealed class ConnectLoginWithoutIdentifierStatus {
+    data class Done(val session: String, val username: String) :
+        ConnectLoginWithoutIdentifierStatus()
+
+    data class Error(
+        val error: LoginWithoutIdentifierError,
+        val triggerFallback: Boolean,
+        val developerDetails: String,
+        val prefillUsername: String? = null,
+    ) :
+        ConnectLoginWithoutIdentifierStatus()
+
+    data class InitSilentFallback(val username: String? = null, val developerDetails: String) :
+        ConnectLoginWithoutIdentifierStatus()
+
+    data class Ignore(val developerDetails: String) : ConnectLoginWithoutIdentifierStatus()
+}
 
 // Login methods
 suspend fun Corbado.isLoginAllowed(): ConnectLoginStep = withContext(Dispatchers.IO) {
@@ -67,24 +117,28 @@ suspend fun Corbado.clearOneTap() {
     clientStateService.clearLastLogin()
 }
 
-suspend fun Corbado.loginWithOneTap(): ConnectLoginStatus = withContext(Dispatchers.IO) {
-    val lastLogin = clientStateService.getLastLogin()?.data
-        ?: return@withContext ConnectLoginStatus.InitFallback(
-            null,
-            AuthError("missing_last_login", "One-tap login requested but no last login found.")
-        )
+suspend fun Corbado.loginWithOneTap(): ConnectLoginWithIdentifierStatus =
+    withContext(Dispatchers.IO) {
+        val lastLogin = clientStateService.getLastLogin()?.data
+            ?: return@withContext ConnectLoginWithIdentifierStatus.Error(
+                error = LoginWithIdentifierError.InvalidStateError,
+                triggerFallback = true,
+                developerDetails = "One-tap login requested but no last login found."
+            )
 
-    return@withContext loginWithTextField(lastLogin.identifierValue)
-}
+        return@withContext loginWithTextField(lastLogin.identifierValue)
+    }
 
-suspend fun Corbado.loginWithTextField(identifier: String): ConnectLoginStatus =
+suspend fun Corbado.loginWithTextField(identifier: String): ConnectLoginWithIdentifierStatus =
     withContext(Dispatchers.IO) {
         var authenticatorInteraction = false
 
         try {
-            val p = process ?: return@withContext ConnectLoginStatus.InitFallback(
-                identifier,
-                AuthError("invalid_state", "Process not initialized. Call isLoginAllowed() first.")
+            val p = process ?: return@withContext ConnectLoginWithIdentifierStatus.Error(
+                LoginWithIdentifierError.InvalidStateError,
+                triggerFallback = true,
+                "Process not initialized. Call isLoginAllowed() first.",
+                identifier
             )
             client.setProcessId(p.id)
 
@@ -92,13 +146,17 @@ suspend fun Corbado.loginWithTextField(identifier: String): ConnectLoginStatus =
             val startRsp = client.loginStart(identifier = identifier, loadedMs = loadedMs)
 
             startRsp.fallbackOperationError.let { err ->
-                handleFallbackOperationError(err)?.let { return@withContext it }
+                handleFallbackOperationErrorForLoginWithIdentifier(err)?.let { return@withContext it }
             }
 
-            val assertionOptions = authController.serializeGetCredentialRequest(CorbadoClient.deserializeAssertion(startRsp.assertionOptions))
+            val assertionOptions = authController.serializeGetCredentialRequest(
+                CorbadoClient.deserializeAssertion(startRsp.assertionOptions)
+            )
             val authenticatorRequest =
                 GetPublicKeyCredentialOption(requestJson = assertionOptions)
-            val response = authController.authorize(listOf(authenticatorRequest))
+            val response = authController.authorize(listOf(authenticatorRequest),
+                startRsp.preferImmediatelyAvailable == true
+            )
             authenticatorInteraction = true
             val authenticatorResponse = when (val credential =
                 response.credential) {
@@ -115,40 +173,52 @@ suspend fun Corbado.loginWithTextField(identifier: String): ConnectLoginStatus =
             )
 
             finishRsp.fallbackOperationError?.let {
-                handleFallbackOperationError(it)?.let { return@withContext it }
+                handleFallbackOperationErrorForLoginWithIdentifier(it)?.let { return@withContext it }
             }
 
             finishRsp.passkeyOperation?.let {
                 val lastLogin = LastLogin.from(it)
                 clientStateService.setLastLogin(lastLogin)
 
-                return@withContext ConnectLoginStatus.Done(
+                return@withContext ConnectLoginWithIdentifierStatus.Done(
                     finishRsp.signedPasskeyData,
                     it.identifierValue
                 )
             }
 
-            return@withContext ConnectLoginStatus.InitFallback(
-                identifier,
-                AuthError("unknown_error", "Unknown error during login finish.")
+            return@withContext ConnectLoginWithIdentifierStatus.Error(
+                error = LoginWithIdentifierError.CorbadoAPIError,
+                triggerFallback = true,
+                developerDetails = "The login finish call did not return a passkey operation. This is unexpected behavior. Please report this as a GitHub issue."
             )
         } catch (e: AuthorizationError) {
             return@withContext when (e) {
-                AuthorizationError.Cancelled -> ConnectLoginStatus.InitRetry
-                AuthorizationError.NoCredentialsAvailable -> ConnectLoginStatus.InitFallback(
-                    identifier
+                AuthorizationError.Cancelled -> ConnectLoginWithIdentifierStatus.InitRetry("User cancelled the operation. Consider allowing a retry.")
+
+                AuthorizationError.NoCredentialsAvailable -> ConnectLoginWithIdentifierStatus.InitSilentFallback(
+                    identifier,
+                    "No local credentials available for login. User has to use conventional login."
                 )
 
-                else -> ConnectLoginStatus.InitFallback(
-                    identifier,
-                    defaultAuthError
+                else -> ConnectLoginWithIdentifierStatus.Error(
+                    error = LoginWithIdentifierError.UnHandledError,
+                    triggerFallback = true,
+                    developerDetails = "An unhandled error occurred. Please report this as a GitHub issue (AuthorizationError). Message: ${e.message}, Cause: ${e.cause}, Stacktrace: ${e.stackTraceToString()}"
                 )
             }
         } catch (e: Exception) {
             if (authenticatorInteraction) {
-                return@withContext ConnectLoginStatus.InitFallback(identifier, defaultAuthError)
+                return@withContext ConnectLoginWithIdentifierStatus.Error(
+                    username = identifier,
+                    error = LoginWithIdentifierError.UnHandledError,
+                    triggerFallback = true,
+                    developerDetails = "An unhandled error occurred. Please report this as a GitHub issue (AuthorizationError). Message: ${e.message}, Cause: ${e.cause}, Stacktrace: ${e.stackTraceToString()}"
+                )
             } else {
-                return@withContext ConnectLoginStatus.InitFallback(identifier)
+                return@withContext ConnectLoginWithIdentifierStatus.InitSilentFallback(
+                    username = identifier,
+                    developerDetails = "An unhandled error occurred. Please report this as a GitHub issue. Message: ${e.message}, Cause: ${e.cause}, Stacktrace: ${e.stackTraceToString()}"
+                )
             }
         }
     }
@@ -156,10 +226,12 @@ suspend fun Corbado.loginWithTextField(identifier: String): ConnectLoginStatus =
 suspend fun Corbado.loginWithoutIdentifier(
     cuiChallenge: String,
     onStart: suspend () -> Unit = {}
-): ConnectLoginStatus = withContext(Dispatchers.IO) {
+): ConnectLoginWithoutIdentifierStatus = withContext(Dispatchers.IO) {
     var authenticatorInteraction = false
     try {
-        val assertionOptions = authController.serializeGetCredentialRequest(CorbadoClient.deserializeAssertion(cuiChallenge))
+        val assertionOptions = authController.serializeGetCredentialRequest(
+            CorbadoClient.deserializeAssertion(cuiChallenge)
+        )
         val authenticatorRequest =
             GetPublicKeyCredentialOption(requestJson = assertionOptions)
         val response = authController.authorize(listOf(authenticatorRequest), true)
@@ -179,60 +251,194 @@ suspend fun Corbado.loginWithoutIdentifier(
         )
 
         finishRsp.fallbackOperationError?.let {
-            handleFallbackOperationError(it)?.let { return@withContext it }
+            handleFallbackOperationErrorForLoginWithoutIdentifier(it)?.let { return@withContext it }
         }
 
         finishRsp.passkeyOperation?.let {
             val lastLogin = LastLogin.from(it)
             clientStateService.setLastLogin(lastLogin)
-            return@withContext ConnectLoginStatus.Done(
+            return@withContext ConnectLoginWithoutIdentifierStatus.Done(
                 finishRsp.signedPasskeyData,
                 it.identifierValue
             )
         }
 
-        return@withContext ConnectLoginStatus.InitTextField(
-            null,
-            AuthError("unknown_error", "Unknown error during login finish.")
+        return@withContext ConnectLoginWithoutIdentifierStatus.Error(
+            error = LoginWithoutIdentifierError.CorbadoAPIError,
+            triggerFallback = true,
+            developerDetails = "The login finish call did not return a passkey operation. This is unexpected behavior. Please report this as a GitHub issue."
         )
     } catch (e: AuthorizationError) {
         return@withContext when (e) {
-            AuthorizationError.Cancelled -> ConnectLoginStatus.InitTextField(
-                cuiChallenge,
-                null
+            AuthorizationError.Cancelled -> ConnectLoginWithoutIdentifierStatus.Ignore("User cancelled the operation.")
+
+            AuthorizationError.NoCredentialsAvailable -> ConnectLoginWithoutIdentifierStatus.Ignore(
+                "No local credentials available for login."
             )
 
-            AuthorizationError.NoCredentialsAvailable -> ConnectLoginStatus.InitTextField(
-                null,
-                null
+            else -> ConnectLoginWithoutIdentifierStatus.Error(
+                error = LoginWithoutIdentifierError.UnHandledError,
+                triggerFallback = true,
+                developerDetails = "An unhandled error occurred. Please report this as a GitHub issue (AuthorizationError). Message: ${e.message}, Cause: ${e.cause}, Stacktrace: ${e.stackTraceToString()}"
             )
-
-            else -> ConnectLoginStatus.InitFallback("")
         }
     } catch (e: Exception) {
         if (authenticatorInteraction) {
-            return@withContext ConnectLoginStatus.InitFallback("", defaultAuthError)
+            return@withContext ConnectLoginWithoutIdentifierStatus.Error(
+                error = LoginWithoutIdentifierError.UnHandledError,
+                triggerFallback = true,
+                developerDetails = "An unhandled error occurred. Please report this as a GitHub issue (AuthorizationError). Message: ${e.message}, Cause: ${e.cause}, Stacktrace: ${e.stackTraceToString()}"
+            )
         } else {
-            return@withContext ConnectLoginStatus.InitFallback("")
+            return@withContext ConnectLoginWithoutIdentifierStatus.InitSilentFallback(
+                developerDetails = "An unhandled error occurred. Please report this as a GitHub issue. Message: ${e.message}, Cause: ${e.cause}, Stacktrace: ${e.stackTraceToString()}"
+            )
         }
     }
 }
 
-private fun handleFallbackOperationError(error: FallbackOperationError): ConnectLoginStatus? {
-    if (error.initFallback) {
-        val authError = error.error?.let { AuthError(it.code, it.message) }
-        return ConnectLoginStatus.InitFallback(error.identifier, authError)
+private fun handleFallbackOperationErrorForLoginWithIdentifier(fallbackOperationError: FallbackOperationError): ConnectLoginWithIdentifierStatus? {
+    val error = fallbackOperationError.error
+    val identifier = fallbackOperationError.identifier
+    // The backend did not return a successful response, but it did not return an error code either.
+    // We can either react with a silent fallback or an ignore.
+    if (error == null) {
+        return if (fallbackOperationError.initFallback) {
+            ConnectLoginWithIdentifierStatus.InitSilentFallback(
+                identifier,
+                "A post-auth operation error occurred during a login call. A silent fallback is triggered because no error code was provided."
+            )
+        } else {
+            return null
+        }
     }
 
-    error.error?.let { nonNullError ->
-        val authError = AuthError(nonNullError.code, nonNullError.message)
-        return ConnectLoginStatus.InitTextField(null, authError)
-    }
+    when (error.code) {
+        "no_cbo_user" ->
+            return ConnectLoginWithIdentifierStatus.InitSilentFallback(
+                identifier,
+                "This user interacts with a passkey component for the very first time. There can't be a passkey yet, so we trigger a silent fallback."
+            )
 
-    return null
+        "user_not_found" -> {
+            return ConnectLoginWithIdentifierStatus.Error(
+                LoginWithIdentifierError.UserNotFound,
+                triggerFallback = false,
+                "The user tried to log in with an identifier that does not match any account. The user can correct the identifier in the text field and try again.",
+                identifier
+            )
+        }
+
+        "identifier_not_whitelisted" -> {
+            return ConnectLoginWithIdentifierStatus.InitSilentFallback(
+                identifier,
+                "The project is currently in gradual rollout phase. The user tried to log in with an identifier that is not whitelisted yet. A silent fallback is triggered."
+            )
+        }
+
+        "unexpected_error" -> {
+            return ConnectLoginWithIdentifierStatus.Error(
+                LoginWithIdentifierError.CorbadoAPIError,
+                triggerFallback = true,
+                "An unexpected error occurred during a login call. This is a generic error that is not handled by the SDK. Please report this as a GitHub issue.",
+                identifier
+            )
+        }
+
+        else -> {
+            val customError = LoginWithIdentifierError.CustomError(error.code, error.message)
+            val developerDetails =
+                "A login call returned an error that is not handled by the SDK. This is a custom error defined in one of your actions."
+            return if (fallbackOperationError.initFallback) {
+                ConnectLoginWithIdentifierStatus.Error(
+                    customError,
+                    true,
+                    developerDetails,
+                    identifier,
+                )
+            } else {
+                ConnectLoginWithIdentifierStatus.Error(
+                    customError,
+                    false,
+                    developerDetails,
+                    identifier,
+                )
+            }
+        }
+    }
 }
 
-private suspend fun Corbado.getConnectLoginStepLoginInit(loginData: ConnectLoginInitData): ConnectLoginStep {
+private fun handleFallbackOperationErrorForLoginWithoutIdentifier(fallbackOperationError: FallbackOperationError): ConnectLoginWithoutIdentifierStatus? {
+    val error = fallbackOperationError.error
+    // The backend did not return a successful response, but it did not return an error code either.
+    // We can either react with a silent fallback or an ignore.
+    if (error == null) {
+        return if (fallbackOperationError.initFallback) {
+            ConnectLoginWithoutIdentifierStatus.InitSilentFallback(
+                fallbackOperationError.identifier,
+                "A post-auth operation error occurred during a login finish call."
+            )
+        } else {
+            ConnectLoginWithoutIdentifierStatus.Ignore(
+                "A post-auth operation error occurred during a login finish call."
+            )
+        }
+    }
+
+    when (error.code) {
+        "cui_credential_deleted" ->
+            return ConnectLoginWithoutIdentifierStatus.Error(
+                error = LoginWithoutIdentifierError.PasskeyDeletedOnServer(error.message),
+                triggerFallback = true,
+                developerDetails = "The user tried to log in with a passkey that was deleted on the server.",
+            )
+
+        "cui_alternative_project_id" -> {
+            val regex =
+                Regex("This passkey is linked to a (.+) account. Try again with your (.+) passkeys.")
+            val matchResult = regex.find(error.message)
+            var wrongProjectName: String? = null
+            var correctProjectName: String? = null
+            if (matchResult != null && matchResult.groupValues.size == 3) {
+                wrongProjectName = matchResult.groupValues[1]
+                correctProjectName = matchResult.groupValues[2]
+            }
+
+            return ConnectLoginWithoutIdentifierStatus.Error(
+                error = LoginWithoutIdentifierError.ProjectIDMismatch(
+                    error.message,
+                    wrongProjectName,
+                    correctProjectName
+                ),
+                triggerFallback = true,
+                developerDetails = "You configured multiple projects with the same RPID. The user tried to log in with a passkey that is associated with a different project ID than the one configured in the SDK.",
+            )
+        }
+
+        else -> {
+            val customError = LoginWithoutIdentifierError.CustomError(error.code, error.message)
+            val developerDetails =
+                "The login finish call returned an error that is not handled by the SDK. This is a custom error defined in one of your actions."
+            return if (fallbackOperationError.initFallback) {
+                ConnectLoginWithoutIdentifierStatus.Error(
+                    customError,
+                    triggerFallback = true,
+                    developerDetails,
+                    fallbackOperationError.identifier,
+                )
+            } else {
+                ConnectLoginWithoutIdentifierStatus.Error(
+                    customError,
+                    triggerFallback = false,
+                    developerDetails,
+                    fallbackOperationError.identifier
+                )
+            }
+        }
+    }
+}
+
+private fun Corbado.getConnectLoginStepLoginInit(loginData: ConnectLoginInitData): ConnectLoginStep {
     loginInitCompleted = System.currentTimeMillis()
 
     if (!loginData.loginAllowed) {

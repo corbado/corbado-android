@@ -286,7 +286,7 @@ class ConnectExampleUITests {
         assertTrue(initialScreen.awaitState(PasskeyTextField), "Login must init in passkey text field")
         initialScreen.loginWithIdentifierButNoSuccess(nonExistingEmail)
 
-        assertTrue(initialScreen.awaitState(PasskeyTextField, errorMessage = "There is no account registered to that email address."), "Should show error for non-existing email")
+        assertTrue(initialScreen.awaitState(PasskeyTextField, errorMessage = "No account matches that email."), "Should show error for non-existing email")
     }
 
     @Test

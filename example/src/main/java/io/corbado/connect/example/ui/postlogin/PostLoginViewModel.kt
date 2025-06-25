@@ -60,7 +60,7 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    private suspend fun connectTokenProvider(): String {
+    private suspend fun connectTokenProvider(connectTokenType: ConnectTokenType): String {
         val session = Amplify.Auth.fetchAuthSession() as AWSCognitoAuthSession
         val userPoolToken = session.userPoolTokensResult
         val idToken = userPoolToken.value?.idToken
@@ -68,7 +68,7 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
             throw ConnectTokenError("No id token found")
         }
 
-        val result = AppBackend.getConnectToken(ConnectTokenType.PasskeyAppend, idToken)
+        val result = AppBackend.getConnectToken(connectTokenType, idToken)
         if (result.isFailure) {
             throw ConnectTokenError("Could not get connect token")
         }
@@ -80,7 +80,7 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             primaryLoading.value = true
             when(val result = corbado.completeAppend()) {
-                is ConnectAppendStatus.Completed -> state.value = PostLoginStatus.PasskeyAppended(result.aaguid)
+                is ConnectAppendStatus.Completed -> state.value = PostLoginStatus.PasskeyAppended(result.passkeyDetails?.aaguidName)
                 ConnectAppendStatus.Cancelled -> errorMessage.value = "You have cancelled setting up your passkey. Please try again."
                 else -> skipPasskeyCreation()
             }

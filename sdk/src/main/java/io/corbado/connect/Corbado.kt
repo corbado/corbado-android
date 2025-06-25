@@ -66,6 +66,7 @@ data class ConnectTokenError(
     val description: String? = null
 ) : Exception(description)
 
+val defaultErrorMessage = "Passkey error. Use password to log in."
 val defaultAuthError = AuthError(code = "unavailable", message = "Passkey error. Use password to log in.")
 
 class Corbado(
@@ -103,6 +104,7 @@ class Corbado(
 
     fun clearProcess() {
         process = null
+        client.setProcessId(null)
     }
 
     internal fun buildClientInfo(): ClientInformation {
@@ -115,7 +117,7 @@ class Corbado(
             clientEnvHandle = clientEnvHandleEntry?.data,
             isNative = true,
             clientEnvHandleMeta = clientStateMeta,
-            nativeMeta = PasskeyClientTelemetryCollector.collectData()
+            nativeMeta = PasskeyClientTelemetryCollector.collectData(context)
         )
     }
 } 
