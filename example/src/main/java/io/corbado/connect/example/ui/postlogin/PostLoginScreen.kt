@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -26,9 +27,10 @@ fun PostLoginScreen(
     postLoginViewModel: PostLoginViewModel = viewModel()
 ) {
     val state by postLoginViewModel.state.collectAsState()
+    val activity = LocalContext.current as? android.app.Activity
 
     LaunchedEffect(Unit) {
-        postLoginViewModel.loadInitialStep()
+        activity?.let { postLoginViewModel.loadInitialStep(it) }
 
         postLoginViewModel.navigationEvents.collect { event ->
             when (event) {
@@ -47,14 +49,14 @@ fun PostLoginScreen(
     ) {
         when (val s = state) {
             PostLoginStatus.Loading -> CircularProgressIndicator(modifier = Modifier.testTag("LoadingIndicator"))
-            PostLoginStatus.PasskeyAppend -> PasskeyAppendView(postLoginViewModel)
+            PostLoginStatus.PasskeyAppend -> activity?.let { PasskeyAppendView(postLoginViewModel, it) }
             is PostLoginStatus.PasskeyAppended -> PasskeyAppendedView(postLoginViewModel, s.aaguidName)
         }
     }
 }
 
 @Composable
-fun PasskeyAppendView(viewModel: PostLoginViewModel) {
+fun PasskeyAppendView(viewModel: PostLoginViewModel, activity: android.app.Activity) {
     val isLoading by viewModel.primaryLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
@@ -93,7 +95,7 @@ fun PasskeyAppendView(viewModel: PostLoginViewModel) {
 
         CorbadoPrimaryButton(
             text = "Create passkey",
-            onClick = { viewModel.createPasskey() },
+            onClick = { viewModel.createPasskey(activity) },
             isLoading = isLoading,
             modifier = Modifier.testTag("CreatePasskeyButton")
         )

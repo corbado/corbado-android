@@ -57,7 +57,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     private var initialized = false
     private var retryCount = 0
 
-    fun loadInitialStep() {
+    fun loadInitialStep(activityContext: android.content.Context) {
         if (initialized) return
         initialized = true
 
@@ -72,14 +72,14 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 is ConnectLoginStep.InitTextField -> {
                     _status.value = LoginStatus.PasskeyTextField
                     nextStep.challenge?.let {
-                        val result = corbado.loginWithoutIdentifier(it)
+                        val result = corbado.loginWithoutIdentifier(activityContext, it)
                         completePasskeyLoginWithoutIdentifier(result)
                     }
                 }
 
                 is ConnectLoginStep.InitFallback -> {
                     _status.value = LoginStatus.FallbackFirst
-                    errorMessage.value = nextStep.error?.message
+                    errorMessage.value = nextStep.cause?.message
                 }
             }
         }
@@ -121,7 +121,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     _status.value = LoginStatus.PasskeyTextField
                 }
 
-                result.prefillUsername?.let { email.value = it }
+                result.username?.let { email.value = it }
             }
 
             is ConnectLoginWithoutIdentifierStatus.Ignore -> {
@@ -213,18 +213,18 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun loginWithPasskeyTextField() {
+    fun loginWithPasskeyTextField(activityContext: android.content.Context) {
         viewModelScope.launch {
             primaryLoading.value = true
-            val result = corbado.loginWithTextField(email.value)
+            val result = corbado.loginWithTextField(activityContext, email.value)
             completePasskeyLoginWithIdentifier(result)
         }
     }
 
-    fun loginWithPasskeyOneTap() {
+    fun loginWithPasskeyOneTap(activityContext: android.content.Context) {
         viewModelScope.launch {
             primaryLoading.value = true
-            val result = corbado.loginWithOneTap()
+            val result = corbado.loginWithOneTap(activityContext)
             completePasskeyLoginWithIdentifier(result)
         }
     }

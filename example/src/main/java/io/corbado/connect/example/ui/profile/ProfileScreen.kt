@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -27,6 +28,7 @@ fun ProfileScreen(navController: NavController, profileViewModel: ProfileViewMod
     val passkeyAppendAllowed by profileViewModel.passkeyAppendAllowed.collectAsState()
     val listMessage by profileViewModel.listMessage.collectAsState()
     val errorMessage by profileViewModel.errorMessage.collectAsState()
+    val activity = LocalContext.current as? android.app.Activity
 
     LaunchedEffect(Unit) {
         profileViewModel.fetchUserData()
@@ -101,7 +103,7 @@ fun ProfileScreen(navController: NavController, profileViewModel: ProfileViewMod
                     CorbadoPrimaryButton(
                         text = "Create passkey",
                         modifier = Modifier.testTag("CreatePasskeyButton"),
-                        onClick = { profileViewModel.appendPasskey() }
+                        onClick = { activity?.let { profileViewModel.appendPasskey(it) } }
                     )
                 }
 

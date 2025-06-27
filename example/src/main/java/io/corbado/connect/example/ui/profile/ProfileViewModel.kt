@@ -97,9 +97,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         return result.getOrThrow()
     }
 
-    fun appendPasskey() {
+    fun appendPasskey(activityContext: android.content.Context) {
         viewModelScope.launch {
-            when (val appendStatus = corbado.completePasskeyListAppend(::connectTokenProvider)) {
+            when (val appendStatus = corbado.completePasskeyListAppend(activityContext, ::connectTokenProvider)) {
                 is ConnectManageStatus.Done -> {
                     passkeys.value = appendStatus.passkeys
                     listMessage.value = if (appendStatus.passkeys.isEmpty()) "There is currently no passkey saved for this account." else null

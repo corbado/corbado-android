@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
 
     fun blockCorbadoEndpoints(urls: List<String> = listOf()) {
         val corbado = CorbadoService.getInstance(application)
-        corbado.setBlockedUrls(urls)
+        corbado.setBlockedUrlPaths(urls)
     }
 
     fun resetCorbadoInstance() {

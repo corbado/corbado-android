@@ -1,5 +1,10 @@
 package io.corbado.connect
 
+import android.content.Context
+import io.corbado.connect.ManagePasskeyEvent.ManageCredentialExists
+import io.corbado.connect.ManagePasskeyEvent.ManageError
+import io.corbado.connect.ManagePasskeyEvent.ManageErrorUnexpected
+import io.corbado.connect.ManagePasskeyEvent.ManageLearnMore
 import io.corbado.simplecredentialmanager.AuthorizationError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,52 +23,147 @@ sealed class ConnectManageStatus {
     data object PasskeyOperationExcludeCredentialsMatch : ConnectManageStatus()
 }
 
+enum class ManageSituation {
+    CboApiNotAvailableDuringInitialLoad,
+    CtApiNotAvailableDuringInitialLoad,
+    CboApiNotAvailableDuringDelete,
+    CtApiNotAvailablePreDelete,
+    CtApiNotAvailablePreAuthenticator,
+    CboApiPasskeysNotSupported,
+    CboApiNotAvailablePreAuthenticator,
+    CboApiNotAvailablePostAuthenticator,
+    ClientPasskeyOperationCancelled,
+    ClientExcludeCredentialsMatch,
+    CboApiPasskeysNotSupportedLight,
+    Unknown
+}
+
 // Manage methods
-suspend fun Corbado.isManageAppendAllowed(connectTokenProvider: suspend (ConnectTokenType) -> String): ConnectManageStep = withContext(Dispatchers.IO) {
-    try {
-        val allowed = manageAllowedStep1()
-        val (passkeys) = getPasskeys(connectTokenProvider)
-        if (!allowed) {
-            return@withContext ConnectManageStep.NotAllowed(passkeys)
+suspend fun Corbado.isManageAppendAllowed(connectTokenProvider: suspend (ConnectTokenType) -> String): ConnectManageStep =
+    withContext(Dispatchers.IO) {
+        try {
+            val allowed = manageAllowedStep1()
+            val (passkeys) = getPasskeys(connectTokenProvider)
+            if (!allowed) {
+                return@withContext ConnectManageStep.NotAllowed(passkeys)
+            }
+
+            return@withContext ConnectManageStep.Allowed(passkeys)
+        } catch (e: ConnectTokenError) {
+            client.recordManageEvent(
+                ManageErrorUnexpected(e),
+                ManageSituation.CtApiNotAvailableDuringInitialLoad
+            )
+
+            return@withContext ConnectManageStep.Error(e.message)
+        } catch (e: Exception) {
+            client.recordManageEvent(
+                ManageErrorUnexpected(e),
+                ManageSituation.CboApiNotAvailableDuringInitialLoad
+            )
+
+            return@withContext ConnectManageStep.Error(e.toString())
         }
-
-        return@withContext ConnectManageStep.Allowed(passkeys)
-    } catch (e: Exception) {
-        return@withContext ConnectManageStep.Error(e.message ?: "An unknown error occurred")
     }
-}
 
-suspend fun Corbado.completePasskeyListAppend(connectTokenProvider: suspend (ConnectTokenType) -> String): ConnectManageStatus = withContext(Dispatchers.IO) {
-    try {
-        val connectToken = connectTokenProvider(ConnectTokenType.PasskeyAppend)
+suspend fun Corbado.completePasskeyListAppend(activityContext: Context, connectTokenProvider: suspend (ConnectTokenType) -> String): ConnectManageStatus =
+    withContext(Dispatchers.IO) {
         val loadedMs = appendInitCompleted ?: System.currentTimeMillis()
-        val startRsp = client.appendStart(connectToken = connectToken, forcePasskeyAppend = true, loadedMs = loadedMs)
+        try {
+            val connectToken = connectTokenProvider(ConnectTokenType.PasskeyAppend)
+            val startRsp = try {
+                client.appendStart(
+                    connectToken = connectToken,
+                    forcePasskeyAppend = true,
+                    loadedMs = loadedMs
+                )
+            } catch (e: Exception) {
+                client.recordManageEvent(
+                    ManageErrorUnexpected(e),
+                    ManageSituation.CboApiNotAvailablePreAuthenticator
+                )
+                return@withContext ConnectManageStatus.Error(
+                    e.message ?: "An unknown error occurred during append start"
+                )
+            }
 
-        val rawOptions = startRsp.options ?: return@withContext ConnectManageStatus.Error("Passkeys not supported on this device")
-        val attestationOptions = authController.serializeCreatePublicKeyCredentialRequest(rawOptions)
-        val authenticatorResponse = authController.createPasskey(attestationOptions)
-        val typedAuthenticatorResponse = authController.typeCreatePublicKeyCredentialResponse(authenticatorResponse)
-        val finishRsp = client.appendFinish(typedAuthenticatorResponse)
+            val rawOptions = startRsp.options
+                ?: return@withContext ConnectManageStatus.Error("Passkeys not supported on this device")
+            val attestationOptions =
+                authController.serializeCreatePublicKeyCredentialRequest(rawOptions)
+            val authenticatorResponse = try {
+                authController.createPasskey(activityContext, attestationOptions)
+            } catch (e: AuthorizationError) {
+                return@withContext when (e) {
+                    AuthorizationError.Cancelled -> {
+                        client.recordManageEvent(
+                            ManageError(e),
+                            ManageSituation.ClientPasskeyOperationCancelled
+                        )
 
-        finishRsp.passkeyOperation.let {
-            val lastLogin = LastLogin.from(it)
-            clientStateService.setLastLogin(lastLogin)
+                        ConnectManageStatus.PasskeyOperationCancelled
+                    }
+
+                    AuthorizationError.ExcludeCredentialsMatch -> {
+                        client.recordManageEvent(
+                            ManageCredentialExists(e),
+                            ManageSituation.ClientExcludeCredentialsMatch
+                        )
+
+                        ConnectManageStatus.PasskeyOperationExcludeCredentialsMatch
+                    }
+
+                    else -> {
+                        client.recordManageEvent(
+                            ManageErrorUnexpected(e),
+                            ManageSituation.CboApiNotAvailablePostAuthenticator
+                        )
+
+                        ConnectManageStatus.Error(e.message)
+                    }
+                }
+            }
+
+            val typedAuthenticatorResponse =
+                authController.typeCreatePublicKeyCredentialResponse(authenticatorResponse)
+            val finishRsp = try {
+                client.appendFinish(typedAuthenticatorResponse)
+            } catch (e: Exception) {
+                client.recordManageEvent(
+                    ManageErrorUnexpected(e),
+                    ManageSituation.CboApiNotAvailablePostAuthenticator
+                )
+
+                return@withContext ConnectManageStatus.Error(e.toString())
+            }
+
+            finishRsp.passkeyOperation.let {
+                val lastLogin = LastLogin.from(it)
+                clientStateService.setLastLogin(lastLogin)
+            }
+
+            val (passkeys) = getPasskeys(connectTokenProvider)
+            return@withContext ConnectManageStatus.Done(passkeys)
+        } catch (e: Exception) {
+            client.recordManageEvent(
+                ManageErrorUnexpected(e),
+                ManageSituation.CtApiNotAvailablePreAuthenticator
+            )
+            return@withContext ConnectManageStatus.Error(e.message)
+
+        } catch (e: Exception) {
+            client.recordManageEvent(
+                ManageErrorUnexpected(e),
+                ManageSituation.Unknown
+            )
+            return@withContext ConnectManageStatus.Error(e.message ?: "An unknown error occurred")
         }
-
-        val (passkeys) = getPasskeys(connectTokenProvider)
-        return@withContext ConnectManageStatus.Done(passkeys)
-    } catch (e: AuthorizationError) {
-        return@withContext when(e) {
-            AuthorizationError.Cancelled -> ConnectManageStatus.PasskeyOperationCancelled
-            AuthorizationError.ExcludeCredentialsMatch -> ConnectManageStatus.PasskeyOperationExcludeCredentialsMatch
-            else -> ConnectManageStatus.Error(e.message)
-        }
-    } catch (e: Exception) {
-        return@withContext ConnectManageStatus.Error(e.message ?: "An unknown error occurred")
     }
-}
 
-suspend fun Corbado.deletePasskey(connectTokenProvider: suspend (ConnectTokenType) -> String, passkeyId: String): ConnectManageStatus = withContext(Dispatchers.IO) {
+suspend fun Corbado.deletePasskey(
+    connectTokenProvider: suspend (ConnectTokenType) -> String,
+    passkeyId: String
+): ConnectManageStatus = withContext(Dispatchers.IO) {
     try {
         val connectToken = connectTokenProvider(ConnectTokenType.PasskeyDelete)
         client.manageDelete(connectToken = connectToken, passkeyId = passkeyId)
@@ -71,9 +171,24 @@ suspend fun Corbado.deletePasskey(connectTokenProvider: suspend (ConnectTokenTyp
 
         val (passkeys) = getPasskeys(connectTokenProvider)
         return@withContext ConnectManageStatus.Done(passkeys)
+    } catch (e: ConnectTokenError) {
+        client.recordManageEvent(
+            ManageErrorUnexpected(e),
+            ManageSituation.CtApiNotAvailablePreDelete
+        )
+        return@withContext ConnectManageStatus.Error(e.message)
     } catch (e: Exception) {
-        return@withContext ConnectManageStatus.Error(e.message ?: "An unknown error occurred")
+        client.recordManageEvent(
+            ManageErrorUnexpected(e),
+            ManageSituation.CboApiNotAvailableDuringDelete
+        )
+
+        return@withContext ConnectManageStatus.Error(e.toString())
     }
+}
+
+suspend fun Corbado.manageRecordLearnMoreEvent() = withContext(Dispatchers.IO) {
+    client.recordManageEvent(ManageLearnMore)
 }
 
 @Throws(Exception::class)
@@ -88,7 +203,11 @@ private suspend fun Corbado.getPasskeys(connectTokenProvider: suspend (ConnectTo
             sourceBrowser = passkey.sourceBrowser,
             lastUsedMs = passkey.lastUsedMs,
             createdMs = passkey.createdMs,
-            aaguidDetails = AaguidDetails(passkey.aaguidDetails.name, passkey.aaguidDetails.iconLight, passkey.aaguidDetails.iconDark)
+            aaguidDetails = AaguidDetails(
+                passkey.aaguidDetails.name,
+                passkey.aaguidDetails.iconLight,
+                passkey.aaguidDetails.iconDark
+            )
         )
     }
 
@@ -96,7 +215,8 @@ private suspend fun Corbado.getPasskeys(connectTokenProvider: suspend (ConnectTo
 }
 
 private suspend fun Corbado.manageAllowedStep1(): Boolean = withContext(Dispatchers.IO) {
-    val initRes = client.manageInit(buildClientInfo(), clientStateService.getInvitationToken()?.data)
+    val initRes =
+        client.manageInit(buildClientInfo(), clientStateService.getInvitationToken()?.data)
     appendInitCompleted = System.currentTimeMillis()
     val manageData = ConnectManageInitData(
         manageAllowed = initRes.manageAllowed,

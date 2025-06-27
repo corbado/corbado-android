@@ -39,7 +39,7 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
 
     private var initialized = false
 
-    fun loadInitialStep() {
+    fun loadInitialStep(activityContext: android.content.Context) {
         if (initialized) return
         initialized = true
 
@@ -49,7 +49,7 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
                 is ConnectAppendStep.AskUserForAppend -> {
                     state.value = PostLoginStatus.PasskeyAppend
                     if (nextStep.autoAppend) {
-                        createPasskey()
+                        createPasskey(activityContext)
                     }
                 }
 
@@ -76,10 +76,10 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
         return result.getOrThrow()
     }
 
-    fun createPasskey() {
+    fun createPasskey(activityContext: android.content.Context) {
         viewModelScope.launch {
             primaryLoading.value = true
-            when(val result = corbado.completeAppend()) {
+            when(val result = corbado.completeAppend(activityContext)) {
                 is ConnectAppendStatus.Completed -> state.value = PostLoginStatus.PasskeyAppended(result.passkeyDetails?.aaguidName)
                 ConnectAppendStatus.Cancelled -> errorMessage.value = "You have cancelled setting up your passkey. Please try again."
                 else -> skipPasskeyCreation()

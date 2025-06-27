@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -17,13 +18,15 @@ import io.corbado.connect.example.R
 import io.corbado.connect.example.ui.Screen
 import io.corbado.connect.example.ui.components.CorbadoPrimaryButton
 import io.corbado.connect.example.ui.components.CorbadoSecondaryButton
+import android.app.Activity
 
 @Composable
 fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = viewModel()) {
     val status by loginViewModel.status.collectAsState()
+    val activity = LocalContext.current as? Activity
 
     LaunchedEffect(Unit) {
-        loginViewModel.loadInitialStep()
+        activity?.let { loginViewModel.loadInitialStep(it) }
 
         loginViewModel.navigationEvents.collect { event ->
             when (event) {
@@ -49,10 +52,30 @@ fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = v
             LoginStatus.FallbackFirst -> FallbackLoginView(loginViewModel, navController)
             LoginStatus.FallbackSecondTOTP -> FallbackTOTPView(loginViewModel)
             LoginStatus.FallbackSecondSMS -> FallbackSMSView(loginViewModel)
-            LoginStatus.PasskeyTextField -> PasskeyTextFieldView(loginViewModel, navController)
-            LoginStatus.PasskeyOneTap -> PasskeyOneTapView(loginViewModel, navController)
-            LoginStatus.PasskeyErrorSoft -> PasskeyErrorSoftView(loginViewModel)
-            LoginStatus.PasskeyErrorHard -> PasskeyErrorHardView(loginViewModel)
+            LoginStatus.PasskeyTextField -> activity?.let {
+                PasskeyTextFieldView(
+                    loginViewModel,
+                    navController,
+                    it
+                )
+            }
+
+            LoginStatus.PasskeyOneTap -> activity?.let {
+                PasskeyOneTapView(
+                    loginViewModel,
+                    navController,
+                    it
+                )
+            }
+
+            LoginStatus.PasskeyErrorSoft -> activity?.let {
+                PasskeyErrorSoftView(
+                    loginViewModel,
+                    it
+                )
+            }
+
+            LoginStatus.PasskeyErrorHard -> activity?.let { PasskeyErrorHardView(loginViewModel, it) }
         }
     }
 }
@@ -177,7 +200,11 @@ fun FallbackSMSView(viewModel: LoginViewModel) {
 }
 
 @Composable
-fun PasskeyTextFieldView(viewModel: LoginViewModel, navController: NavController) {
+fun PasskeyTextFieldView(
+    viewModel: LoginViewModel,
+    navController: NavController,
+    activity: Activity
+) {
     val email by viewModel.email.collectAsState()
     val isLoading by viewModel.primaryLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -193,7 +220,9 @@ fun PasskeyTextFieldView(viewModel: LoginViewModel, navController: NavController
             value = email,
             onValueChange = { viewModel.email.value = it },
             label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth().testTag("EmailTextField")
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("EmailTextField")
         )
 
         errorMessage?.let {
@@ -202,7 +231,7 @@ fun PasskeyTextFieldView(viewModel: LoginViewModel, navController: NavController
 
         CorbadoPrimaryButton(
             text = "Login with Passkey",
-            onClick = { viewModel.loginWithPasskeyTextField() },
+            onClick = { viewModel.loginWithPasskeyTextField(activity) },
             isLoading = isLoading,
             modifier = Modifier.testTag("LoginWithPasskeyButton")
         )
@@ -216,7 +245,7 @@ fun PasskeyTextFieldView(viewModel: LoginViewModel, navController: NavController
 }
 
 @Composable
-fun PasskeyOneTapView(viewModel: LoginViewModel, navController: NavController) {
+fun PasskeyOneTapView(viewModel: LoginViewModel, navController: NavController, activity: Activity) {
     val email by viewModel.email.collectAsState()
     val isLoading by viewModel.primaryLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -234,7 +263,7 @@ fun PasskeyOneTapView(viewModel: LoginViewModel, navController: NavController) {
 
         CorbadoPrimaryButton(
             text = "Login as ${truncateEmail(email, 30)}",
-            onClick = { viewModel.loginWithPasskeyOneTap() },
+            onClick = { viewModel.loginWithPasskeyOneTap(activity) },
             isLoading = isLoading,
             modifier = Modifier.testTag("LoginOneTapButton")
         )
@@ -254,7 +283,7 @@ fun PasskeyOneTapView(viewModel: LoginViewModel, navController: NavController) {
 }
 
 @Composable
-fun PasskeyErrorSoftView(viewModel: LoginViewModel) {
+fun PasskeyErrorSoftView(viewModel: LoginViewModel, activity: Activity) {
     val isLoading by viewModel.primaryLoading.collectAsState()
 
     Column(
@@ -283,7 +312,7 @@ fun PasskeyErrorSoftView(viewModel: LoginViewModel) {
 
         CorbadoPrimaryButton(
             text = "Continue",
-            onClick = { viewModel.loginWithPasskeyOneTap() },
+            onClick = { viewModel.loginWithPasskeyOneTap(activity) },
             isLoading = isLoading,
             modifier = Modifier.testTag("LoginErrorSoft")
         )
@@ -296,7 +325,7 @@ fun PasskeyErrorSoftView(viewModel: LoginViewModel) {
 }
 
 @Composable
-fun PasskeyErrorHardView(viewModel: LoginViewModel) {
+fun PasskeyErrorHardView(viewModel: LoginViewModel, activity: Activity) {
     val isLoading by viewModel.primaryLoading.collectAsState()
 
     Column(
@@ -325,7 +354,7 @@ fun PasskeyErrorHardView(viewModel: LoginViewModel) {
 
         CorbadoPrimaryButton(
             text = "Try again",
-            onClick = { viewModel.loginWithPasskeyOneTap() },
+            onClick = { viewModel.loginWithPasskeyOneTap(activity) },
             isLoading = isLoading
         )
 

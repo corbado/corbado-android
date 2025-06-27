@@ -12,8 +12,6 @@ import com.google.android.gms.common.GoogleApiAvailability
 
 internal object PasskeyClientTelemetryCollector {
     fun collectData(context: Context): NativeMeta {
-        var errorMessage: String? = null
-
         return try {
             NativeMeta(
                 platform = "Android",
@@ -27,11 +25,10 @@ internal object PasskeyClientTelemetryCollector {
                 isGooglePlayServices = isGooglePlayServicesAvailable(context),
             )
         } catch (e: Exception) {
-            errorMessage = "Failed to collect telemetry: ${e.message}"
             NativeMeta(
                 platform = "Android",
                 platformVersion = Build.VERSION.RELEASE,
-                error = errorMessage
+                error = "Failed to collect telemetry: ${e.message}"
             )
         }
     }
@@ -56,7 +53,6 @@ internal object PasskeyClientTelemetryCollector {
             .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)) {
             BiometricManager.BIOMETRIC_SUCCESS -> NativeMeta.DeviceOwnerAuth.biometrics
             else -> {
-                // Check if device has any security (PIN, pattern, password)
                 val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE)
                         as? android.app.KeyguardManager
                 when {
@@ -80,6 +76,11 @@ internal object PasskeyClientTelemetryCollector {
     private fun isGooglePlayServicesAvailable(context: Context): Boolean? {
         val googleApiAvailability = GoogleApiAvailability.getInstance()
         val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context)
+        val pkgInfo = context.packageManager.getPackageInfo("com.google.android.gms", 0)
+        val playServicesVersion = if (android.os.Build.VERSION.SDK_INT >= 28)
+            pkgInfo.longVersionCode
+        else
+            @Suppress("DEPRECATION") pkgInfo.versionCode.toLong()
         return resultCode == ConnectionResult.SUCCESS
     }
 }

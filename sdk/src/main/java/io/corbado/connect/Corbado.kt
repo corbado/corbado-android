@@ -3,9 +3,10 @@ package io.corbado.connect
 import android.content.Context
 import com.corbado.api.models.ClientInformation
 import com.corbado.api.models.ClientStateMeta
-import com.corbado.api.v1.CorbadoConnectApi
 import io.corbado.simplecredentialmanager.AuthorizationController
 import io.corbado.simplecredentialmanager.real.RealAuthorizationController
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -36,9 +37,6 @@ internal data class ConnectManageInitData(
     val expiresAt: Long?
 )
 
-// Placeholder for error handling
-data class AuthError(val code: String, val message: String)
-
 data class Passkey(
     val id: String,
     val tags: List<String>,
@@ -63,17 +61,16 @@ enum class ConnectTokenType {
 }
 
 data class ConnectTokenError(
-    val description: String? = null
-) : Exception(description)
+    override val message: String = "Error during connect token retrieval"
+) : Exception(message)
 
-val defaultErrorMessage = "Passkey error. Use password to log in."
-val defaultAuthError = AuthError(code = "unavailable", message = "Passkey error. Use password to log in.")
+const val defaultErrorMessage = "Passkey error. Use password to log in."
 
 class Corbado(
-    private val projectId: String,
+    projectId: String,
     private val context: Context,
-    private val frontendApiUrlSuffix: String? = null,
-    private val authorizationController: AuthorizationController? = null,
+    frontendApiUrlSuffix: String? = null,
+    authorizationController: AuthorizationController? = null,
     internal val useOneTap: Boolean = true
 ) {
     internal val client: CorbadoClient
@@ -98,13 +95,21 @@ class Corbado(
         clientStateService.setInvitationToken(token)
     }
 
-    fun setBlockedUrls(urls: List<String>) {
-        client.setBlockedUrls(urls)
+    fun setBlockedUrlPaths(urls: List<String>) {
+        client.setBlockedUrlPaths(urls)
+    }
+
+    fun setTimeoutUrlPaths(setBlockedUrlPaths: Map<String, Long>) {
+        client.setTimeoutUrlPaths(setBlockedUrlPaths)
     }
 
     fun clearProcess() {
         process = null
         client.setProcessId(null)
+    }
+
+    suspend fun recordLocalUnlock() = withContext(Dispatchers.IO) {
+        client.recordLoginEvent(LoginPasskeyEvent.LocalUnlock)
     }
 
     internal fun buildClientInfo(): ClientInformation {

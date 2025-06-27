@@ -1812,14 +1812,19 @@ components:
           login-error-untyped,
           login-error-unexpected,
           login-one-tap-switch,
+          login-no-credentials,
           user-append-after-cross-platform-blacklisted,
           user-append-after-login-error-blacklisted,
           append-credential-exists,
           append-explicit-abort,
           append-error,
           append-error-unexpected,
-          manage-error-unexpected,
           append-learn-more,
+          manage-error-unexpected,
+          manage-error,
+          manage-learn-more,
+          manage-credential-exists,
+          local-unlock,
         ]
 
     blockType:

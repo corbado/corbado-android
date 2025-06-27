@@ -3,6 +3,7 @@ package io.corbado.connect.example.pages
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import io.corbado.connect.example.helpers.CredentialManagerHelper
 
 /**
  * Page object for the Post Login Screen (passkey creation screen).
@@ -57,5 +58,39 @@ class PostLoginScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTest
     fun skip(): ProfileScreen {
         composeTestRule.onNodeWithTag("SkipPasskeyButton").performClick()
         return ProfileScreen(composeTestRule).also { it.visible() }
+    }
+    
+    /**
+     * Append/create a passkey using real Credential Manager.
+     */
+    suspend fun appendWithRealPasskey(): ProfileScreen {
+        val credentialManagerHelper = CredentialManagerHelper()
+        
+        waitAndClick("CreatePasskeyButton")
+        
+        // Wait for and handle the credential manager overlay
+        if (credentialManagerHelper.waitForCredentialManagerOverlay()) {
+            credentialManagerHelper.handlePasskeyCreationDialog("create")
+        }
+        
+        waitAndClick("ContinueButton")
+        return ProfileScreen(composeTestRule).also { it.visible() }
+    }
+
+    /**
+     * Cancel passkey creation using real Credential Manager.
+     */
+    suspend fun cancelPasskeyCreation(): TotpSetupScreen {
+        val credentialManagerHelper = CredentialManagerHelper()
+        
+        waitAndClick("CreatePasskeyButton")
+        
+        // Wait for and cancel the credential manager overlay
+        if (credentialManagerHelper.waitForCredentialManagerOverlay()) {
+            credentialManagerHelper.handlePasskeyCreationDialog("cancel")
+        }
+        
+        // Should navigate to TOTP setup after cancellation
+        return TotpSetupScreen(composeTestRule).also { it.visible() }
     }
 } 

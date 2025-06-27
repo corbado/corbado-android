@@ -6,6 +6,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
+import io.corbado.connect.example.helpers.CredentialManagerHelper
 
 /**
  * Page object for the Login Screen, mirroring the Swift LoginScreen implementation.
@@ -188,6 +191,61 @@ class LoginScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRule
         // Conditional UI is triggered automatically when the conditional UI challenge is present
         // The user doesn't need to explicitly click anything - it's handled by the system
         // We just wait for the login to complete and navigate to profile
+        return ProfileScreen(composeTestRule).also { it.visible() }
+    }
+
+    // real passkey related methods
+
+    suspend fun cancelRealOverlayLogin() {
+        val credentialManagerHelper = CredentialManagerHelper()
+        if (credentialManagerHelper.waitForCredentialManagerOverlay()) {
+            UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
+        }
+    }
+
+    /**
+     * Perform one-tap login with real passkey.
+     */
+    suspend fun loginWithRealPasskey(): ProfileScreen {
+        val credentialManagerHelper = CredentialManagerHelper()
+
+        waitAndClick("LoginOneTapButton")
+
+        // Wait for and handle the credential manager overlay
+        if (credentialManagerHelper.waitForCredentialManagerOverlay()) {
+            credentialManagerHelper.handlePasskeyAuthenticationDialog("authenticate")
+        }
+
+        return ProfileScreen(composeTestRule).also { it.visible() }
+    }
+
+    /**
+     * Cancel real passkey authentication.
+     */
+    suspend fun cancelRealPasskeyAuthentication() {
+        val credentialManagerHelper = CredentialManagerHelper()
+
+        waitAndClick("LoginOneTapButton")
+
+        // Wait for and cancel the credential manager overlay
+        if (credentialManagerHelper.waitForCredentialManagerOverlay()) {
+            credentialManagerHelper.handlePasskeyAuthenticationDialog("cancel")
+        }
+    }
+
+    /**
+     * Retry after passkey error.
+     */
+    suspend fun retryAfterPasskeyError(): ProfileScreen {
+        val credentialManagerHelper = CredentialManagerHelper()
+
+        waitAndClick("LoginErrorSoft")
+
+        // Handle the retry authentication
+        if (credentialManagerHelper.waitForCredentialManagerOverlay()) {
+            credentialManagerHelper.handlePasskeyAuthenticationDialog("authenticate")
+        }
+
         return ProfileScreen(composeTestRule).also { it.visible() }
     }
 }

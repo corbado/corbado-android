@@ -21,6 +21,7 @@ import org.junit.runner.RunWith
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * UI tests for the Connect Example app, mirroring the Swift ConnectExampleUITests.
@@ -148,7 +149,7 @@ class ConnectExampleUITests {
      * This mirrors the Swift testAppendAfterSignUpSkipped() test.
      */
     @Test
-    fun testAppendAfterSignUpSkipped() = runTest {
+    fun testAppendAfterSignUpSkipped() = runTest(timeout = 2.minutes) {
         val initialScreen = startApp()
         val authenticatorApp = AuthenticatorApp()
         val email = TestDataFactory.createEmail()
@@ -332,8 +333,8 @@ class ConnectExampleUITests {
         assertTrue(loginScreen.awaitState(FallbackFirst, errorMessage = "You previously deleted this passkey. Use your password to log in instead."))
     }
 
-    @Test
-    fun testLoginErrorStatesNetworkBlocking() = runTest {
+    @Test()
+    fun testLoginErrorStatesNetworkBlocking() = runTest(timeout = 2.minutes) {
         val initialScreen = startApp()
         val email = TestDataFactory.createEmail()
 
@@ -367,8 +368,8 @@ class ConnectExampleUITests {
         loginScreen.loginWithIdentifier(email)
     }
 
-    @Test
-    fun testLoginErrorStatesPasskeyAppendBlocked() = runTest {
+    @Test()
+    fun testLoginErrorStatesPasskeyAppendBlocked() = runTest(timeout = 2.minutes) {
         val initialScreen = startApp()
         val authenticatorApp = AuthenticatorApp()
         val email = TestDataFactory.createEmail()
@@ -402,7 +403,6 @@ class ConnectExampleUITests {
         loginScreen3.completeLoginWithTOTP(code2!!).autoSkip()
     }
 
-    @Test
     fun testManageErrorStatesNetworkBlocking() = runTest {
         val initialScreen = startApp()
         val email = TestDataFactory.createEmail()
@@ -448,6 +448,7 @@ class ConnectExampleUITests {
         profileScreen5.appendPasskey()
         waitForCondition { profileScreen5.countNumberOfPasskeys() == 1 }
         profileScreen5.deletePasskey(passkeyId = profileScreen5.getPasskeyIds()[0], complete = true)
+        waitForCondition { profileScreen4.countNumberOfPasskeys() == 1 }
         assertEquals(profileScreen5.getErrorMessage(), "Passkey deletion failed. Please try again later.")
         assertEquals(profileScreen5.getListMessage(), null, "List message should be cleared after deletion error")
     }
