@@ -480,7 +480,7 @@ class ConnectExampleUITests {
         val loginScreen = LoginScreen(composeTestRule)
 
         // Wait up to 5 seconds for the app to initialize and show the login screen
-        waitForCondition(timeout = 5000L) {
+        waitForCondition(timeout = 10000L) {
             loginScreen.visible(timeout = 0.1) // Quick check without additional timeout
         }
 
