@@ -1,4 +1,4 @@
-package io.corbado.connect.example.ui
+package com.corbado.connect.example.ui
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")

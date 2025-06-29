@@ -1,4 +1,4 @@
-package io.corbado.connect.example.ui.postlogin
+package com.corbado.connect.example.ui.postlogin
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -6,15 +6,15 @@ import androidx.lifecycle.viewModelScope
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
 import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
 import com.amplifyframework.kotlin.core.Amplify
-import io.corbado.connect.ConnectAppendStep
-import io.corbado.connect.ConnectAppendStatus
-import io.corbado.connect.ConnectTokenError
-import io.corbado.connect.ConnectTokenType
-import io.corbado.connect.completeAppend
-import io.corbado.connect.example.di.CorbadoService
-import io.corbado.connect.example.ui.login.NavigationEvent
-import io.corbado.connect.example.ui.profile.AppBackend
-import io.corbado.connect.isAppendAllowed
+import com.corbado.connect.ConnectAppendStep
+import com.corbado.connect.ConnectAppendStatus
+import com.corbado.connect.ConnectTokenError
+import com.corbado.connect.ConnectTokenType
+import com.corbado.connect.completeAppend
+import com.corbado.connect.example.di.CorbadoService
+import com.corbado.connect.example.ui.login.NavigationEvent
+import com.corbado.connect.example.ui.profile.AppBackend
+import com.corbado.connect.isAppendAllowed
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow

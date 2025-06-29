@@ -1,4 +1,4 @@
-package io.corbado.connect.example.helpers
+package com.corbado.connect.example.helpers
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By

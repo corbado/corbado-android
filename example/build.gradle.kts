@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "io.corbado.connect.example"
+    namespace = "com.corbado.connect.example"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "io.corbado.connect.example"
+        applicationId = "com.corbado.connect.example"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -88,7 +88,7 @@ dependencies {
     implementation("com.amplifyframework:aws-auth-cognito:2.28.0")
 
     // Virtual authenticator for UI testing
-    implementation("io.corbado:simple-credential-manager-mocks:1.0.0")
+    implementation("com.corbado:simple-credential-manager-mocks:0.1.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

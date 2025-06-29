@@ -1,4 +1,4 @@
-package io.corbado.connect.example.ui.theme
+package com.corbado.connect.example.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

@@ -1,10 +1,10 @@
-package io.corbado.connect
+package com.corbado.connect
 
 import android.content.Context
 import com.corbado.api.models.ClientInformation
 import com.corbado.api.models.ClientStateMeta
-import io.corbado.simplecredentialmanager.AuthorizationController
-import io.corbado.simplecredentialmanager.real.RealAuthorizationController
+import com.corbado.simplecredentialmanager.AuthorizationController
+import com.corbado.simplecredentialmanager.real.RealAuthorizationController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName

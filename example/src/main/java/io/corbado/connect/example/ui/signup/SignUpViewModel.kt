@@ -1,4 +1,4 @@
-package io.corbado.connect.example.ui.signup
+package com.corbado.connect.example.ui.signup
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -7,8 +7,8 @@ import com.amplifyframework.auth.AuthUserAttribute
 import com.amplifyframework.auth.AuthUserAttributeKey
 import com.amplifyframework.auth.options.AuthSignUpOptions
 import com.amplifyframework.kotlin.core.Amplify
-import io.corbado.connect.example.ui.Screen
-import io.corbado.connect.example.ui.login.NavigationEvent
+import com.corbado.connect.example.ui.Screen
+import com.corbado.connect.example.ui.login.NavigationEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow

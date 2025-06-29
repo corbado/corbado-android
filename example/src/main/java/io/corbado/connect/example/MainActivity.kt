@@ -1,4 +1,4 @@
-package io.corbado.connect.example
+package com.corbado.connect.example
 
 import android.app.Application
 import android.os.Bundle
@@ -20,14 +20,14 @@ import androidx.navigation.compose.rememberNavController
 import com.amplifyframework.AmplifyException
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
 import com.amplifyframework.kotlin.core.Amplify
-import io.corbado.connect.example.di.CorbadoService
-import io.corbado.connect.example.ui.Screen
-import io.corbado.connect.example.ui.login.LoginScreen
-import io.corbado.connect.example.ui.postlogin.PostLoginScreen
-import io.corbado.connect.example.ui.profile.ProfileScreen
-import io.corbado.connect.example.ui.signup.SignUpScreen
-import io.corbado.connect.example.ui.totpscreen.TotpSetupScreen
-import io.corbado.connect.example.ui.theme.ConnectExampleTheme
+import com.corbado.connect.example.di.CorbadoService
+import com.corbado.connect.example.ui.Screen
+import com.corbado.connect.example.ui.login.LoginScreen
+import com.corbado.connect.example.ui.postlogin.PostLoginScreen
+import com.corbado.connect.example.ui.profile.ProfileScreen
+import com.corbado.connect.example.ui.signup.SignUpScreen
+import com.corbado.connect.example.ui.totpscreen.TotpSetupScreen
+import com.corbado.connect.example.ui.theme.ConnectExampleTheme
 
 class MainActivity : ComponentActivity() {
     companion object {

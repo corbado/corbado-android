@@ -1,4 +1,4 @@
-package io.corbado.connect.example.ui.totpscreen
+package com.corbado.connect.example.ui.totpscreen
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -10,8 +10,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.lightspark.composeqr.QrCodeView
-import io.corbado.connect.example.ui.components.CorbadoPrimaryButton
-import io.corbado.connect.example.ui.login.NavigationEvent
+import com.corbado.connect.example.ui.components.CorbadoPrimaryButton
+import com.corbado.connect.example.ui.login.NavigationEvent
 
 @Composable
 fun TotpSetupScreen(

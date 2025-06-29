@@ -1,4 +1,4 @@
-package io.corbado.connect
+package com.corbado.connect
 
 import android.bluetooth.BluetoothManager
 import android.content.Context

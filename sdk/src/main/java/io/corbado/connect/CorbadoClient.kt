@@ -1,4 +1,4 @@
-package io.corbado.connect
+package com.corbado.connect
 
 import com.corbado.api.models.ClientInformation
 import com.corbado.api.models.ConnectAppendFinishReq
@@ -22,10 +22,10 @@ import com.corbado.api.models.ConnectManageListReq
 import com.corbado.api.models.ConnectManageListRsp
 import com.corbado.api.models.PasskeyEventType
 import com.corbado.api.v1.CorbadoConnectApi
-import io.corbado.simplecredentialmanager.PublicKeyCredentialAssertion
-import io.corbado.simplecredentialmanager.PublicKeyCredentialRegistration
-import io.corbado.simplecredentialmanager.RPPlatformPublicKeyCredentialAssertion
-import io.corbado.simplecredentialmanager.RPPlatformPublicKeyCredentialRegistration
+import com.corbado.simplecredentialmanager.PublicKeyCredentialAssertion
+import com.corbado.simplecredentialmanager.PublicKeyCredentialRegistration
+import com.corbado.simplecredentialmanager.RPPlatformPublicKeyCredentialAssertion
+import com.corbado.simplecredentialmanager.RPPlatformPublicKeyCredentialRegistration
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit

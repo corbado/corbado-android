@@ -1,4 +1,4 @@
-package io.corbado.connect.example
+package com.corbado.connect.example
 
 import dev.turingcomplete.kotlinonetimepassword.GoogleAuthenticator
 import dev.turingcomplete.kotlinonetimepassword.TimeBasedOneTimePasswordConfig

@@ -1,4 +1,4 @@
-package io.corbado.connect.example.ui.totpscreen
+package com.corbado.connect.example.ui.totpscreen
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -7,7 +7,7 @@ import com.amplifyframework.auth.TOTPSetupDetails
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
 import com.amplifyframework.auth.cognito.MFAPreference
 import com.amplifyframework.kotlin.core.Amplify
-import io.corbado.connect.example.ui.login.NavigationEvent
+import com.corbado.connect.example.ui.login.NavigationEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow

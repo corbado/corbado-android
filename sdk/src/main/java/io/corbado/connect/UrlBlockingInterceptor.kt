@@ -1,4 +1,4 @@
-package io.corbado.connect
+package com.corbado.connect
 
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull

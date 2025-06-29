@@ -1,4 +1,4 @@
-package io.corbado.connect.example.ui.signup
+package com.corbado.connect.example.ui.signup
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -10,10 +10,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import io.corbado.connect.example.ui.Screen
-import io.corbado.connect.example.ui.components.CorbadoPrimaryButton
-import io.corbado.connect.example.ui.components.CorbadoSecondaryButton
-import io.corbado.connect.example.ui.login.NavigationEvent
+import com.corbado.connect.example.ui.Screen
+import com.corbado.connect.example.ui.components.CorbadoPrimaryButton
+import com.corbado.connect.example.ui.components.CorbadoSecondaryButton
+import com.corbado.connect.example.ui.login.NavigationEvent
 
 @Composable
 fun SignUpScreen(navController: NavController, signUpViewModel: SignUpViewModel = viewModel()) {

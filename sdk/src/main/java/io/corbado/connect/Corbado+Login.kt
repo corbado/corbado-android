@@ -1,10 +1,10 @@
-package io.corbado.connect
+package com.corbado.connect
 
 import android.content.Context
 import androidx.credentials.GetPublicKeyCredentialOption
 import androidx.credentials.PublicKeyCredential
 import com.corbado.api.models.FallbackOperationError
-import io.corbado.simplecredentialmanager.AuthorizationError
+import com.corbado.simplecredentialmanager.AuthorizationError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

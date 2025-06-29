@@ -1,4 +1,4 @@
-package io.corbado.connect.example.pages
+package com.corbado.connect.example.pages
 
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull

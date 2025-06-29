@@ -1,16 +1,16 @@
-package io.corbado.connect.example
+package com.corbado.connect.example
 
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import io.corbado.connect.example.pages.LoginScreen
-import io.corbado.connect.example.pages.LoginStatus.FallbackFirst
-import io.corbado.connect.example.pages.LoginStatus.FallbackSecondTOTP
-import io.corbado.connect.example.pages.LoginStatus.PasskeyErrorSoft
-import io.corbado.connect.example.pages.LoginStatus.PasskeyOneTap
-import io.corbado.connect.example.pages.LoginStatus.PasskeyTextField
-import io.corbado.simplecredentialmanager.AuthorizationError
-import io.corbado.simplecredentialmanager.mocks.ControlServer
-import io.corbado.simplecredentialmanager.mocks.VirtualAuthorizationController
+import com.corbado.connect.example.pages.LoginScreen
+import com.corbado.connect.example.pages.LoginStatus.FallbackFirst
+import com.corbado.connect.example.pages.LoginStatus.FallbackSecondTOTP
+import com.corbado.connect.example.pages.LoginStatus.PasskeyErrorSoft
+import com.corbado.connect.example.pages.LoginStatus.PasskeyOneTap
+import com.corbado.connect.example.pages.LoginStatus.PasskeyTextField
+import com.corbado.simplecredentialmanager.AuthorizationError
+import com.corbado.simplecredentialmanager.mocks.ControlServer
+import com.corbado.simplecredentialmanager.mocks.VirtualAuthorizationController
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After

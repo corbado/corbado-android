@@ -1,4 +1,4 @@
-package io.corbado.connect.example.pages
+package com.corbado.connect.example.pages
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.ComposeTestRule
@@ -8,7 +8,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
-import io.corbado.connect.example.helpers.CredentialManagerHelper
+import com.corbado.connect.example.helpers.CredentialManagerHelper
 
 /**
  * Page object for the Login Screen, mirroring the Swift LoginScreen implementation.

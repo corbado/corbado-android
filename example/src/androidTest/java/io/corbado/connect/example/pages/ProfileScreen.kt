@@ -1,4 +1,4 @@
-package io.corbado.connect.example.pages
+package com.corbado.connect.example.pages
 
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -10,7 +10,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithTag
-import io.corbado.connect.example.hasTestTagPrefix
+import com.corbado.connect.example.hasTestTagPrefix
 
 /**
  * Page object for the Profile Screen.

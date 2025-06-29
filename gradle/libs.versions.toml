@@ -22,7 +22,7 @@ androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", vers
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
 moshi-adapters = { module = "com.squareup.moshi:moshi-adapters", version.ref = "moshi" }
-simple-credential-manager = { module = "io.corbado:simple-credential-manager" }
+simple-credential-manager = { module = "com.corbado:simple-credential-manager" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-gradle-plugin" }

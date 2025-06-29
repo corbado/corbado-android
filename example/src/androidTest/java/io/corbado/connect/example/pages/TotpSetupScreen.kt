@@ -1,7 +1,7 @@
-package io.corbado.connect.example.pages
+package com.corbado.connect.example.pages
 
 import androidx.compose.ui.test.junit4.ComposeTestRule
-import io.corbado.connect.example.AuthenticatorApp
+import com.corbado.connect.example.AuthenticatorApp
 
 /**
  * Page object for the TOTP Setup Screen.

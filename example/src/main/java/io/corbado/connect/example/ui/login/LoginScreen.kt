@@ -1,4 +1,4 @@
-package io.corbado.connect.example.ui.login
+package com.corbado.connect.example.ui.login
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -14,10 +14,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import io.corbado.connect.example.R
-import io.corbado.connect.example.ui.Screen
-import io.corbado.connect.example.ui.components.CorbadoPrimaryButton
-import io.corbado.connect.example.ui.components.CorbadoSecondaryButton
+import com.corbado.connect.example.R
+import com.corbado.connect.example.ui.Screen
+import com.corbado.connect.example.ui.components.CorbadoPrimaryButton
+import com.corbado.connect.example.ui.components.CorbadoSecondaryButton
 import android.app.Activity
 
 @Composable

@@ -1,4 +1,4 @@
-package io.corbado.connect.example
+package com.corbado.connect.example
 
 import java.util.*
 

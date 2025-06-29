@@ -1,4 +1,4 @@
-package io.corbado.connect.example
+package com.corbado.connect.example
 
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties

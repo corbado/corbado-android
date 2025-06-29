@@ -1,4 +1,4 @@
-package io.corbado.connect
+package com.corbado.connect
 
 import android.content.Context
 import android.content.SharedPreferences

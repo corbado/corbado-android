@@ -1,9 +1,9 @@
-package io.corbado.connect.example.pages
+package com.corbado.connect.example.pages
 
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import io.corbado.connect.example.helpers.CredentialManagerHelper
+import com.corbado.connect.example.helpers.CredentialManagerHelper
 
 /**
  * Page object for the Post Login Screen (passkey creation screen).

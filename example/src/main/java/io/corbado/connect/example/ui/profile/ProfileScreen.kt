@@ -1,4 +1,4 @@
-package io.corbado.connect.example.ui.profile
+package com.corbado.connect.example.ui.profile
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,10 +14,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import io.corbado.connect.Passkey
-import io.corbado.connect.example.ui.components.CorbadoPrimaryButton
-import io.corbado.connect.example.ui.components.CorbadoSecondaryButton
-import io.corbado.connect.example.ui.login.NavigationEvent
+import com.corbado.connect.Passkey
+import com.corbado.connect.example.ui.components.CorbadoPrimaryButton
+import com.corbado.connect.example.ui.components.CorbadoSecondaryButton
+import com.corbado.connect.example.ui.login.NavigationEvent
 
 @Composable
 fun ProfileScreen(navController: NavController, profileViewModel: ProfileViewModel = viewModel()) {

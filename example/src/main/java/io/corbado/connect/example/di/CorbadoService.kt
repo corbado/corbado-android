@@ -1,9 +1,9 @@
-package io.corbado.connect.example.di
+package com.corbado.connect.example.di
 
 import android.content.Context
-import io.corbado.connect.Corbado
-import io.corbado.connect.example.MainActivity
-import io.corbado.simplecredentialmanager.mocks.VirtualAuthorizationController
+import com.corbado.connect.Corbado
+import com.corbado.connect.example.MainActivity
+import com.corbado.simplecredentialmanager.mocks.VirtualAuthorizationController
 
 object CorbadoService {
     private var instance: Corbado? = null

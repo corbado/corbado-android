@@ -1,4 +1,4 @@
-package io.corbado.connect.example.ui.components
+package com.corbado.connect.example.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues

@@ -1,4 +1,4 @@
-package io.corbado.connect.example.ui.profile
+package com.corbado.connect.example.ui.profile
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -6,16 +6,16 @@ import androidx.lifecycle.viewModelScope
 import com.amplifyframework.auth.AuthUserAttributeKey
 import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
 import com.amplifyframework.kotlin.core.Amplify
-import io.corbado.connect.ConnectManageStatus
-import io.corbado.connect.ConnectManageStep
-import io.corbado.connect.ConnectTokenError
-import io.corbado.connect.ConnectTokenType
-import io.corbado.connect.Passkey
-import io.corbado.connect.completePasskeyListAppend
-import io.corbado.connect.deletePasskey
-import io.corbado.connect.example.di.CorbadoService
-import io.corbado.connect.example.ui.login.NavigationEvent
-import io.corbado.connect.isManageAppendAllowed
+import com.corbado.connect.ConnectManageStatus
+import com.corbado.connect.ConnectManageStep
+import com.corbado.connect.ConnectTokenError
+import com.corbado.connect.ConnectTokenType
+import com.corbado.connect.Passkey
+import com.corbado.connect.completePasskeyListAppend
+import com.corbado.connect.deletePasskey
+import com.corbado.connect.example.di.CorbadoService
+import com.corbado.connect.example.ui.login.NavigationEvent
+import com.corbado.connect.isManageAppendAllowed
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow

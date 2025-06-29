@@ -1,4 +1,4 @@
-package io.corbado.connect.example.ui.theme
+package com.corbado.connect.example.ui.theme
 
 import android.app.Activity
 import android.os.Build

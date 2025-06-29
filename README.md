@@ -41,7 +41,7 @@ Here is an example of a simple service locator:
 
 ```kotlin
 import android.content.Context
-import io.corbado.connect.Corbado
+import com.corbado.connect.Corbado
 
 object CorbadoService {
     private var instance: Corbado? = null
@@ -71,9 +71,9 @@ Here is a basic example of how to initiate a passkey login flow within a Jetpack
 
 ```kotlin
 import androidx.compose.runtime.*
-import io.corbado.connect.Corbado
-import io.corbado.connect.ConnectLoginStep
-import io.corbado.connect.ConnectLoginStatus
+import com.corbado.connect.Corbado
+import com.corbado.connect.ConnectLoginStep
+import com.corbado.connect.ConnectLoginStatus
 import kotlinx.coroutines.launch
 
 @Composable
@@ -177,7 +177,7 @@ After a user has signed up or logged in using a fallback method (password + MFA)
 
 ```kotlin
 import androidx.compose.runtime.*
-import io.corbado.connect.*
+import com.corbado.connect.*
 import kotlinx.coroutines.launch
 
 @Composable

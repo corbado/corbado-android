@@ -1,6 +1,6 @@
-package io.corbado.connect.example.ui.profile
+package com.corbado.connect.example.ui.profile
 
-import io.corbado.connect.ConnectTokenType
+import com.corbado.connect.ConnectTokenType
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader

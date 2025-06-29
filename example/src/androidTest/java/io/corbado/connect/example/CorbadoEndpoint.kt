@@ -1,4 +1,4 @@
-package io.corbado.connect.example
+package com.corbado.connect.example
 
 enum class CorbadoEndpoint(val path: String) {
     LoginInit("/v2/connect/login/init"),
