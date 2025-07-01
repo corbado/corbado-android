@@ -1,8 +1,8 @@
-package com.corbado.connect
+package com.corbado.connect.core
 
 import android.content.Context
-import com.corbado.api.models.ClientInformation
-import com.corbado.api.models.ClientStateMeta
+import com.corbado.connect.api.models.ClientInformation
+import com.corbado.connect.api.models.ClientStateMeta
 import com.corbado.simplecredentialmanager.AuthorizationController
 import com.corbado.simplecredentialmanager.real.RealAuthorizationController
 import kotlinx.coroutines.Dispatchers

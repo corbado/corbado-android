@@ -1,4 +1,4 @@
-package com.corbado.connect
+package com.corbado.connect.core
 
 import okhttp3.Interceptor
 import okhttp3.Response
@@ -19,4 +19,4 @@ internal class ProcessIdInterceptor : Interceptor {
             chain.proceed(originalRequest)
         }
     }
-} 
+}

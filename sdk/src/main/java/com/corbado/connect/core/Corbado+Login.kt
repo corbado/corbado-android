@@ -1,9 +1,9 @@
-package com.corbado.connect
+package com.corbado.connect.core
 
 import android.content.Context
 import androidx.credentials.GetPublicKeyCredentialOption
 import androidx.credentials.PublicKeyCredential
-import com.corbado.api.models.FallbackOperationError
+import com.corbado.connect.api.models.FallbackOperationError
 import com.corbado.simplecredentialmanager.AuthorizationError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -167,7 +167,7 @@ suspend fun Corbado.loginWithTextField(
 
             Pair(
                 authController.serializeGetCredentialRequest(
-                    CorbadoClient.deserializeAssertion(
+                    CorbadoClient.RelyingPartyServerDeserializer.deserializeAssertion(
                         startRsp.assertionOptions
                     )
                 ), startRsp.preferImmediatelyAvailable
@@ -282,7 +282,7 @@ suspend fun Corbado.loginWithoutIdentifier(
 ): ConnectLoginWithoutIdentifierStatus = withContext(Dispatchers.IO) {
     val authenticatorRequest = try {
         val assertionOptions = authController.serializeGetCredentialRequest(
-            CorbadoClient.deserializeAssertion(cuiChallenge)
+            CorbadoClient.RelyingPartyServerDeserializer.deserializeAssertion(cuiChallenge)
         )
         GetPublicKeyCredentialOption(requestJson = assertionOptions)
     } catch (e: Exception) {

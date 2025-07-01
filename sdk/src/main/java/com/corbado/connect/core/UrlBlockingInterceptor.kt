@@ -1,4 +1,4 @@
-package com.corbado.connect
+package com.corbado.connect.core
 
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -7,11 +7,11 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.IOException
 import okio.Timeout
+import java.net.SocketTimeoutException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.TimeUnit
 import kotlin.math.min
-import java.net.SocketTimeoutException
 
 internal class UrlBlockingInterceptor : Interceptor {
 
@@ -60,9 +60,9 @@ internal class UrlBlockingInterceptor : Interceptor {
             .removeSuffix("/").ifEmpty { "/" }
 
     /**
-     * Sleep in small slices.  
+     * Sleep in small slices.
      * Abort immediately if
-     *   • the call is cancelled  (`callTimeout`, `connectTimeout`, user-cancel), or  
+     *   • the call is cancelled  (`callTimeout`, `connectTimeout`, user-cancel), or
      *   • the slice itself is interrupted.
      */
     @Throws(IOException::class)

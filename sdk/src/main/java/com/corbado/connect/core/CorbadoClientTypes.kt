@@ -1,5 +1,7 @@
-package com.corbado.connect
+package com.corbado.connect.core
 
+import com.corbado.simplecredentialmanager.AuthorizationController
+import com.corbado.simplecredentialmanager.real.RealAuthorizationController
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -98,9 +100,9 @@ data class AttestationResponse(
 /**
  * A protocol that handles the presentation of the passkey authorization UI.
  */
-typealias AuthorizationControllerProtocol = com.corbado.simplecredentialmanager.AuthorizationController
+typealias AuthorizationControllerProtocol = AuthorizationController
 /**
  * The default implementation of [AuthorizationControllerProtocol].
  */
-typealias RealAuthorizationController = com.corbado.simplecredentialmanager.real.RealAuthorizationController
+typealias RealAuthorizationController = RealAuthorizationController
 

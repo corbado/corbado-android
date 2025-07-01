@@ -1,9 +1,9 @@
-package com.corbado.connect
+package com.corbado.connect.core
 
 import android.content.Context
-import com.corbado.connect.AppendPasskeyEvent.AppendCredentialExists
-import com.corbado.connect.AppendPasskeyEvent.AppendError
-import com.corbado.connect.AppendPasskeyEvent.AppendErrorUnexpected
+import com.corbado.connect.core.AppendPasskeyEvent.AppendCredentialExists
+import com.corbado.connect.core.AppendPasskeyEvent.AppendError
+import com.corbado.connect.core.AppendPasskeyEvent.AppendErrorUnexpected
 import com.corbado.simplecredentialmanager.AuthorizationError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

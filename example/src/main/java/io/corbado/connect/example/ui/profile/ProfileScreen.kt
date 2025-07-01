@@ -14,7 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.corbado.connect.Passkey
+import com.corbado.connect.core.Passkey
 import com.corbado.connect.example.ui.components.CorbadoPrimaryButton
 import com.corbado.connect.example.ui.components.CorbadoSecondaryButton
 import com.corbado.connect.example.ui.login.NavigationEvent

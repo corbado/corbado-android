@@ -1,7 +1,7 @@
 package com.corbado.connect.example.di
 
 import android.content.Context
-import com.corbado.connect.Corbado
+import com.corbado.connect.core.Corbado
 import com.corbado.connect.example.MainActivity
 import com.corbado.simplecredentialmanager.mocks.VirtualAuthorizationController
 

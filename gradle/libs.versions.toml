@@ -3,26 +3,33 @@ android-gradle-plugin = "8.10.1"
 kotlin = "2.0.20"
 android-compileSdk = "34"
 android-minSdk = "26"
-androidx-core-ktx = "1.12.0"
-androidx-appcompat = "1.6.1"
-google-material = "1.11.0"
-junit = "4.13.2"
-androidx-junit = "1.1.5"
-androidx-espresso-core = "3.5.1"
+
+androidx-core-ktx = "1.13.1"
+androidx-appcompat = "1.7.0"
+androidx-biometric = "1.1.0"
+androidx-espresso-core = "3.6.1"
+kotlinxSerializationJson = "1.6.3"
 okhttp = "4.12.0"
 moshi = "1.15.0"
+simplecredentialmanager = "0.1.1"
+google-play-services = "18.2.0"
+androidx-junit = "1.2.1"
+junit = "4.13.2"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core-ktx" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
-material = { module = "com.google.android.material:material", version.ref = "google-material" }
+androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "androidx-biometric" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 junit = { module = "junit:junit", version.ref = "junit" }
 androidx-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-junit" }
 androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "androidx-espresso-core" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
 moshi-adapters = { module = "com.squareup.moshi:moshi-adapters", version.ref = "moshi" }
-simple-credential-manager = { module = "com.corbado:simple-credential-manager" }
+simple-credential-manager = { module = "com.corbado:simplecredentialmanager", version.ref = "simplecredentialmanager" }
+simple-credential-manager-mocks = { module = "com.corbado:simplecredentialmanager-mocks", version.ref = "simplecredentialmanager" }
+google-play-services = { module = "com.google.android.gms:play-services-base", version = "google-play-services" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-gradle-plugin" }

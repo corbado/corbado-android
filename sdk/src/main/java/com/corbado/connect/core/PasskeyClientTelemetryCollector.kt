@@ -1,12 +1,13 @@
-package com.corbado.connect
+package com.corbado.connect.core
 
+import android.app.KeyguardManager
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.biometric.BiometricManager
 import androidx.core.content.getSystemService
-import com.corbado.api.models.NativeMeta
+import com.corbado.connect.api.models.NativeMeta
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 
@@ -35,7 +36,7 @@ internal object PasskeyClientTelemetryCollector {
 
     private fun getAppVersion(context: Context): String {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-        return packageInfo.versionName  
+        return packageInfo.versionName
     }
 
     private fun getAppBuild(context: Context): String {
@@ -54,7 +55,7 @@ internal object PasskeyClientTelemetryCollector {
             BiometricManager.BIOMETRIC_SUCCESS -> NativeMeta.DeviceOwnerAuth.biometrics
             else -> {
                 val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE)
-                        as? android.app.KeyguardManager
+                        as? KeyguardManager
                 when {
                     keyguardManager?.isDeviceSecure == true -> NativeMeta.DeviceOwnerAuth.code
                     else -> NativeMeta.DeviceOwnerAuth.none
@@ -77,7 +78,7 @@ internal object PasskeyClientTelemetryCollector {
         val googleApiAvailability = GoogleApiAvailability.getInstance()
         val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context)
         val pkgInfo = context.packageManager.getPackageInfo("com.google.android.gms", 0)
-        val playServicesVersion = if (android.os.Build.VERSION.SDK_INT >= 28)
+        val playServicesVersion = if (Build.VERSION.SDK_INT >= 28)
             pkgInfo.longVersionCode
         else
             @Suppress("DEPRECATION") pkgInfo.versionCode.toLong()

@@ -5,9 +5,6 @@ plugins {
     id("com.vanniktech.maven.publish")
 }
 
-group = "com.corbado"
-version = "0.1.0"
-
 android {
     namespace = "com.corbado.connect.core"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -39,29 +36,28 @@ android {
 
 dependencies {
     implementation(project(":api"))
-    api("com.corbado:simplecredentialmanager:0.1.0")
+    api(libs.simple.credential.manager)
     implementation(libs.okhttp)
 
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("com.google.android.material:material:1.12.0")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.biometric)
 
-    implementation("androidx.biometric:biometric:1.1.0")
-    
+    implementation(libs.kotlinx.serialization.json)
+
     // Google Play Services for availability checking
-    implementation("com.google.android.gms:play-services-base:18.2.0")
-    
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    implementation(libs.google.play.services)
+
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
 }
 
 mavenPublishing {
     publishToMavenCentral()
     signAllPublications()
 
-    coordinates("com.corbado", "connect-core", "0.1.0")
+    coordinates("com.corbado", "connect-core", "0.1.5")
 
     pom {
         name.set("Corbado Connect SDK")

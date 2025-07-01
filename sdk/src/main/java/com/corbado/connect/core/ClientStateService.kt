@@ -1,9 +1,9 @@
-package com.corbado.connect
+package com.corbado.connect.core
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import com.corbado.api.models.PasskeyOperation
+import com.corbado.connect.api.models.PasskeyOperation
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -35,9 +35,9 @@ internal data class LastLogin(
             }
 
             val identifierType = when (passkeyOperation.identifierType) {
-                com.corbado.api.models.LoginIdentifierType.email -> LoginIdentifierType.EMAIL
-                com.corbado.api.models.LoginIdentifierType.phone -> LoginIdentifierType.PHONE
-                com.corbado.api.models.LoginIdentifierType.username -> LoginIdentifierType.USERNAME
+                com.corbado.connect.api.models.LoginIdentifierType.email -> LoginIdentifierType.EMAIL
+                com.corbado.connect.api.models.LoginIdentifierType.phone -> LoginIdentifierType.PHONE
+                com.corbado.connect.api.models.LoginIdentifierType.username -> LoginIdentifierType.USERNAME
             }
 
             return LastLogin(

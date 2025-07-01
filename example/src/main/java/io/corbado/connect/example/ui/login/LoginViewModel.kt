@@ -7,23 +7,23 @@ import com.amplifyframework.auth.AuthException
 import com.amplifyframework.auth.cognito.options.AWSCognitoAuthSignInOptions
 import com.amplifyframework.auth.cognito.options.AuthFlowType
 import com.amplifyframework.auth.result.step.AuthSignInStep
-import com.corbado.connect.ConnectLoginStep
-import com.corbado.connect.Corbado
-import com.corbado.connect.clearOneTap
+import com.corbado.connect.core.ConnectLoginStep
+import com.corbado.connect.core.Corbado
+import com.corbado.connect.core.clearOneTap
 import com.corbado.connect.example.di.CorbadoService
 import com.corbado.connect.example.ui.Screen
-import com.corbado.connect.isLoginAllowed
-import com.corbado.connect.loginWithOneTap
-import com.corbado.connect.loginWithTextField
-import com.corbado.connect.loginWithoutIdentifier
+import com.corbado.connect.core.isLoginAllowed
+import com.corbado.connect.core.loginWithOneTap
+import com.corbado.connect.core.loginWithTextField
+import com.corbado.connect.core.loginWithoutIdentifier
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.amplifyframework.kotlin.core.Amplify
-import com.corbado.connect.ConnectLoginWithIdentifierStatus
-import com.corbado.connect.ConnectLoginWithoutIdentifierStatus
+import com.corbado.connect.core.ConnectLoginWithIdentifierStatus
+import com.corbado.connect.core.ConnectLoginWithoutIdentifierStatus
 
 sealed class NavigationEvent {
     data class NavigateTo(val route: String) : NavigationEvent()
