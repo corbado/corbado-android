@@ -37,8 +37,6 @@ enum class AppendSituation {
 // Append methods
 suspend fun Corbado.isAppendAllowed(connectTokenProvider: suspend (ConnectTokenType) -> String): ConnectAppendStep =
     withContext(Dispatchers.IO) {
-        val appendInitLoaded = System.currentTimeMillis()
-
         try {
             val initRes = try {
                 client.appendInit(buildClientInfo(), clientStateService.getInvitationToken()?.data)
@@ -81,7 +79,6 @@ suspend fun Corbado.isAppendAllowed(connectTokenProvider: suspend (ConnectTokenT
                 client.appendStart(
                     connectToken = connectToken,
                     forcePasskeyAppend = false,
-                    loadedMs = appendInitLoaded
                 )
             } catch (e: Exception) {
                 client.recordAppendEvent(

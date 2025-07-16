@@ -46,7 +46,7 @@ mavenPublishing {
     publishToMavenCentral()
     signAllPublications()
 
-    coordinates("com.corbado", "connect-api", "0.1.3")
+    coordinates("com.corbado", "connect-api", "0.1.4")
 
     pom {
         name.set("Corbado Connect API")

@@ -156,10 +156,9 @@ suspend fun Corbado.loginWithTextField(
         }
 
         client.setProcessId(p.id)
-        val loadedMs = loginInitCompleted ?: 0
 
         val (assertionOptions, preferImmediatelyAvailable) = try {
-            val startRsp = client.loginStart(identifier = identifier, loadedMs = loadedMs)
+            val startRsp = client.loginStart(identifier = identifier)
 
             startRsp.fallbackOperationError.let { err ->
                 handleFallbackOperationErrorForLoginWithIdentifier(err)?.let { return@withContext it }
@@ -525,8 +524,6 @@ private fun handleFallbackOperationErrorForLoginWithoutIdentifier(
 }
 
 private fun Corbado.getConnectLoginStepLoginInit(loginData: ConnectLoginInitData): ConnectLoginStep {
-    loginInitCompleted = System.currentTimeMillis()
-
     if (!loginData.loginAllowed) {
         return ConnectLoginStep.InitFallback()
     }

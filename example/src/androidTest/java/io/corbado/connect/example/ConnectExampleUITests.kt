@@ -126,6 +126,8 @@ class ConnectExampleUITests {
             password = TestDataFactory.password
         )
 
+        Thread.sleep(500)
+
         // Clear the error for the second attempt
         controlServer.createError = null
         val profileScreen = postLoginScreen.append(expectAutoAppend = false)

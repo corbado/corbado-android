@@ -68,14 +68,12 @@ suspend fun Corbado.isManageAppendAllowed(connectTokenProvider: suspend (Connect
 
 suspend fun Corbado.completePasskeyListAppend(activityContext: Context, connectTokenProvider: suspend (ConnectTokenType) -> String): ConnectManageStatus =
     withContext(Dispatchers.IO) {
-        val loadedMs = appendInitCompleted ?: System.currentTimeMillis()
         try {
             val connectToken = connectTokenProvider(ConnectTokenType.PasskeyAppend)
             val startRsp = try {
                 client.appendStart(
                     connectToken = connectToken,
                     forcePasskeyAppend = true,
-                    loadedMs = loadedMs
                 )
             } catch (e: Exception) {
                 client.recordManageEvent(
@@ -217,7 +215,6 @@ private suspend fun Corbado.getPasskeys(connectTokenProvider: suspend (ConnectTo
 private suspend fun Corbado.manageAllowedStep1(): Boolean = withContext(Dispatchers.IO) {
     val initRes =
         client.manageInit(buildClientInfo(), clientStateService.getInvitationToken()?.data)
-    appendInitCompleted = System.currentTimeMillis()
     val manageData = ConnectManageInitData(
         manageAllowed = initRes.manageAllowed,
         expiresAt = initRes.expiresAt

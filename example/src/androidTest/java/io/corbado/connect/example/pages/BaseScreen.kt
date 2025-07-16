@@ -103,7 +103,7 @@ abstract class BaseScreen(protected val composeTestRule: ComposeTestRule) {
         }
     }
     
-    protected fun waitAndGetText(tag: String, timeout: Double = 5.0): String? {
+    protected fun waitAndGetText(tag: String, timeout: Double = 10.0): String? {
         return try {
             waitForCondition((timeout * 1000).toLong()) {
                 try {

@@ -116,12 +116,11 @@ internal class CorbadoClient(
     fun loginStart(
         identifier: String,
         source: ConnectLoginStartReq.Source = ConnectLoginStartReq.Source.textMinusField,
-        loadedMs: Long = 0
     ): ConnectLoginStartRsp {
         val req = ConnectLoginStartReq(
             identifier = identifier,
             source = source,
-            loadedMs = loadedMs,
+            loadedMs = 0,
         )
         return corbadoConnectApi.connectLoginStart(req)
     }
@@ -166,12 +165,11 @@ internal class CorbadoClient(
     fun appendStart(
         connectToken: String,
         forcePasskeyAppend: Boolean,
-        loadedMs: Long = 0
     ): AppendStartResult {
         val req = ConnectAppendStartReq(
             appendTokenValue = connectToken,
             forcePasskeyAppend = forcePasskeyAppend,
-            loadedMs = loadedMs
+            loadedMs = 0
         )
 
         val res = corbadoConnectApi.connectAppendStart(req)

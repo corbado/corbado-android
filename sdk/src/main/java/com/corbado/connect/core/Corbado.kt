@@ -77,8 +77,6 @@ class Corbado(
     internal val clientStateService: ClientStateService
     internal var authController: AuthorizationController
     internal var process: ConnectProcess? = null
-    internal var loginInitCompleted: Long? = null
-    internal var appendInitCompleted: Long? = null
 
     init {
         client = CorbadoClient(projectId, frontendApiUrlSuffix)
@@ -93,6 +91,10 @@ class Corbado(
 
     fun setInvitationToken(token: String) {
         clientStateService.setInvitationToken(token)
+    }
+
+    fun cancelOnGoingPasskeyOperation() {
+        authController.cancel()
     }
 
     fun setBlockedUrlPaths(urls: List<String>) {

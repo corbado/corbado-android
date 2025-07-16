@@ -24,11 +24,13 @@ internal object PasskeyClientTelemetryCollector {
                 isBluetoothAvailable = isBluetoothAvailable(context),
                 isBluetoothOn = isBluetoothOn(context),
                 isGooglePlayServices = isGooglePlayServicesAvailable(context),
+                displayName = getAppLabel(context),
             )
         } catch (e: Exception) {
             NativeMeta(
                 platform = "Android",
                 platformVersion = Build.VERSION.RELEASE,
+                displayName = "",
                 error = "Failed to collect telemetry: ${e.message}"
             )
         }
@@ -83,5 +85,11 @@ internal object PasskeyClientTelemetryCollector {
         else
             @Suppress("DEPRECATION") pkgInfo.versionCode.toLong()
         return resultCode == ConnectionResult.SUCCESS
+    }
+
+    fun getAppLabel(context: Context): String {
+        val packageManager = context.packageManager
+        val applicationInfo = packageManager.getApplicationInfo(context.packageName, 0)
+        return packageManager.getApplicationLabel(applicationInfo).toString()
     }
 }
