@@ -1,5 +1,6 @@
 package com.corbado.connect.core
 
+import android.R
 import com.corbado.connect.api.models.ClientInformation
 import com.corbado.connect.api.models.ConnectAppendFinishReq
 import com.corbado.connect.api.models.ConnectAppendFinishRsp
@@ -22,8 +23,7 @@ import com.corbado.connect.api.models.ConnectManageListReq
 import com.corbado.connect.api.models.ConnectManageListRsp
 import com.corbado.connect.api.models.PasskeyEventType
 import com.corbado.connect.api.v1.CorbadoConnectApi
-import com.corbado.connect.core.ProcessIdInterceptor
-import com.corbado.connect.core.UrlBlockingInterceptor
+import com.corbado.connect.api.models.AppendCompletionType as ApiAppendCompletionType
 import com.corbado.simplecredentialmanager.PublicKeyCredentialAssertion
 import com.corbado.simplecredentialmanager.PublicKeyCredentialRegistration
 import com.corbado.simplecredentialmanager.RPPlatformPublicKeyCredentialAssertion
@@ -36,7 +36,8 @@ data class AppendStartResult(
     val options: PublicKeyCredentialRegistration?,
     val variant: ConnectAppendStartRsp.Variant,
     val isRestrictedBrowser: Boolean,
-    val autoAppend: Boolean
+    val autoAppend: Boolean,
+    val conditionalAppend: Boolean
 )
 
 sealed class LoginPasskeyEvent {
@@ -180,11 +181,15 @@ internal class CorbadoClient(
             },
             variant = res.variant,
             isRestrictedBrowser = res.isRestrictedBrowser,
-            autoAppend = res.autoAppend
+            autoAppend = res.autoAppend,
+            conditionalAppend = res.conditionalAppend
         )
     }
 
-    fun appendFinish(authenticatorResponse: RPPlatformPublicKeyCredentialRegistration): ConnectAppendFinishRsp {
+    fun appendFinish(
+        authenticatorResponse: RPPlatformPublicKeyCredentialRegistration,
+        completionType: AppendCompletionType
+    ): ConnectAppendFinishRsp {
         val attestationResponse = RPPlatformPublicKeyCredentialRegistration(
             id = authenticatorResponse.id,
             rawId = authenticatorResponse.rawId,
@@ -202,7 +207,16 @@ internal class CorbadoClient(
             attestationResponse
         )
 
-        val req = ConnectAppendFinishReq(attestationResponse = serializedAttestationResponse)
+        val apiAppendCompletionType = when (completionType) {
+            AppendCompletionType.Auto -> ApiAppendCompletionType.auto
+            AppendCompletionType.Conditional -> ApiAppendCompletionType.conditional
+            AppendCompletionType.Manual -> ApiAppendCompletionType.manual
+            AppendCompletionType.ManualRetry -> ApiAppendCompletionType.manualMinusRetry
+        }
+        val req = ConnectAppendFinishReq(
+            attestationResponse = serializedAttestationResponse,
+            completionType = apiAppendCompletionType
+        )
         return corbadoConnectApi.connectAppendFinish(req)
     }
 
@@ -215,8 +229,13 @@ internal class CorbadoClient(
         return corbadoConnectApi.connectManageInit(req)
     }
 
-    fun manageList(connectToken: String): ConnectManageListRsp {
-        val req = ConnectManageListReq(connectToken = connectToken)
+    fun manageList(connectToken: String, mode: ManageListMode): ConnectManageListRsp {
+        val apiMode = when (mode) {
+            ManageListMode.Default -> ConnectManageListReq.Mode.default
+            ManageListMode.PostDelete -> ConnectManageListReq.Mode.postMinusDelete
+            ManageListMode.PostAppend -> ConnectManageListReq.Mode.postMinusAppend
+        }
+        val req = ConnectManageListReq(connectToken = connectToken, mode = apiMode)
         val res = corbadoConnectApi.connectManageList(req)
 
         return res

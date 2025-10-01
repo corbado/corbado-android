@@ -19,6 +19,12 @@ import com.corbado.connect.example.ui.Screen
 import com.corbado.connect.example.ui.components.CorbadoPrimaryButton
 import com.corbado.connect.example.ui.components.CorbadoSecondaryButton
 import android.app.Activity
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.platform.LocalAutofill
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
 
 @Composable
 fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = viewModel()) {
@@ -75,7 +81,12 @@ fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = v
                 )
             }
 
-            LoginStatus.PasskeyErrorHard -> activity?.let { PasskeyErrorHardView(loginViewModel, it) }
+            LoginStatus.PasskeyErrorHard -> activity?.let {
+                PasskeyErrorHardView(
+                    loginViewModel,
+                    it
+                )
+            }
         }
     }
 }
@@ -220,9 +231,11 @@ fun PasskeyTextFieldView(
             value = email,
             onValueChange = { viewModel.email.value = it },
             label = { Text("Email") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("EmailTextField")
+                .semantics { contentType = ContentType.EmailAddress }
         )
 
         errorMessage?.let {

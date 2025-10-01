@@ -1,6 +1,10 @@
 package com.corbado.connect.example.ui.signup
 
 import android.app.Application
+import android.content.Context
+import androidx.credentials.CreatePasswordRequest
+import androidx.credentials.CredentialManager
+import androidx.credentials.exceptions.CreateCredentialException
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.amplifyframework.auth.AuthUserAttribute
@@ -25,7 +29,7 @@ class SignUpViewModel(application: Application) : AndroidViewModel(application) 
     private val _navigationEvents = MutableSharedFlow<NavigationEvent>()
     val navigationEvents: SharedFlow<NavigationEvent> = _navigationEvents
 
-    fun signUp() {
+    fun signUp(activityContext: Context) {
         viewModelScope.launch {
             primaryLoading.value = true
             errorMessage.value = null
@@ -44,6 +48,18 @@ class SignUpViewModel(application: Application) : AndroidViewModel(application) 
 
                 val result = Amplify.Auth.signIn(email.value, password.value)
                 if (result.isSignedIn) {
+                    val createPasswordRequest =
+                        CreatePasswordRequest(id = email.value, password = password.value)
+
+                    try {
+                        val result =
+                            CredentialManager.create(activityContext)
+                                .createCredential(activityContext, createPasswordRequest)
+                        print(result)
+                    } catch (e: CreateCredentialException) {
+                        print(e)
+                    }
+
                     _navigationEvents.emit(NavigationEvent.NavigateTo(Screen.PostLogin.route))
                 } else {
                     // This case is not handled in this example

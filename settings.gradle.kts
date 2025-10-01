@@ -18,3 +18,4 @@ rootProject.name = "corbado-android"
 include(":api")
 include(":sdk")
 include(":example")
+

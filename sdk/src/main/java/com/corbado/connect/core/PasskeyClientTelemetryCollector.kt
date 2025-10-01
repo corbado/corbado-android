@@ -5,11 +5,15 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.DisplayMetrics
 import androidx.biometric.BiometricManager
 import androidx.core.content.getSystemService
 import com.corbado.connect.api.models.NativeMeta
+import com.corbado.connect.api.models.NativeMetaScreen
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import java.math.BigDecimal
+import java.util.Locale
 
 internal object PasskeyClientTelemetryCollector {
     fun collectData(context: Context): NativeMeta {
@@ -25,6 +29,10 @@ internal object PasskeyClientTelemetryCollector {
                 isBluetoothOn = isBluetoothOn(context),
                 isGooglePlayServices = isGooglePlayServicesAvailable(context),
                 displayName = getAppLabel(context),
+                brand = Build.BRAND,
+                model = Build.MODEL + "|" + Build.HARDWARE + "|" + Build.DEVICE + "|" + Build.PRODUCT,
+                locale = Locale.getDefault().language + "-" + Locale.getDefault().country,
+                screen = getScreenData(context)
             )
         } catch (e: Exception) {
             NativeMeta(
@@ -34,6 +42,22 @@ internal object PasskeyClientTelemetryCollector {
                 error = "Failed to collect telemetry: ${e.message}"
             )
         }
+    }
+
+    private fun getScreenData(context: Context): NativeMetaScreen {
+        val metrics: DisplayMetrics = context.resources.displayMetrics
+
+        val densityFactor = metrics.density
+        val widthPixels = metrics.widthPixels
+        val heightPixels = metrics.heightPixels
+        val widthDp = (widthPixels / densityFactor).toFloat()
+        val heightDp = (heightPixels / densityFactor).toFloat()
+
+        return NativeMetaScreen(
+            widthDp,
+            heightDp,
+            densityFactor.toFloat()
+        )
     }
 
     private fun getAppVersion(context: Context): String {

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
 import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
 import com.amplifyframework.kotlin.core.Amplify
+import com.corbado.connect.core.AppendCompletionType
 import com.corbado.connect.core.ConnectAppendStep
 import com.corbado.connect.core.ConnectAppendStatus
 import com.corbado.connect.core.ConnectTokenError
@@ -23,8 +24,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 sealed class PostLoginStatus {
-    data object Loading: PostLoginStatus()
-    data object PasskeyAppend: PostLoginStatus()
+    data object Loading : PostLoginStatus()
+    data object PasskeyAppend : PostLoginStatus()
     data class PasskeyAppended(val aaguidName: String?) : PostLoginStatus()
 }
 
@@ -33,6 +34,7 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
     val state: MutableStateFlow<PostLoginStatus> = MutableStateFlow(PostLoginStatus.Loading)
     val primaryLoading = MutableStateFlow(false)
     val errorMessage = MutableStateFlow<String?>(null)
+    val retryCount = MutableStateFlow(0)
 
     private val _navigationEvents = MutableSharedFlow<NavigationEvent>()
     val navigationEvents: SharedFlow<NavigationEvent> = _navigationEvents
@@ -47,10 +49,17 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
             val nextStep = corbado.isAppendAllowed(::connectTokenProvider)
             when (nextStep) {
                 is ConnectAppendStep.AskUserForAppend -> {
-                    state.value = PostLoginStatus.PasskeyAppend
-                    if (nextStep.autoAppend) {
-                        createPasskey(activityContext)
+                    var handledByConditionalAppend = false
+                    if (nextStep.conditionalAppend) {
+                        handledByConditionalAppend = createPasskeyConditional(activityContext)
                     }
+
+                    if (!handledByConditionalAppend && nextStep.autoAppend) {
+                        state.value = PostLoginStatus.PasskeyAppend
+                        createPasskey(activityContext, true)
+                    }
+
+                    state.value = PostLoginStatus.PasskeyAppend
                 }
 
                 is ConnectAppendStep.Skip -> {
@@ -76,15 +85,49 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
         return result.getOrThrow()
     }
 
-    fun createPasskey(activityContext: android.content.Context) {
+    fun createPasskey(activityContext: android.content.Context, autoAppend: Boolean = false) {
+        val completionType = if (autoAppend) {
+            AppendCompletionType.Auto
+        } else if (retryCount.value > 0) {
+            AppendCompletionType.Conditional
+        } else {
+            AppendCompletionType.Manual
+        }
+
+        if (!autoAppend) {
+            retryCount.value += 1
+        }
+
         viewModelScope.launch {
             primaryLoading.value = true
-            when(val result = corbado.completeAppend(activityContext)) {
-                is ConnectAppendStatus.Completed -> state.value = PostLoginStatus.PasskeyAppended(result.passkeyDetails?.aaguidName)
-                ConnectAppendStatus.Cancelled -> errorMessage.value = "You have cancelled setting up your passkey. Please try again."
+            when (val result = corbado.completeAppend(activityContext, completionType)) {
+                is ConnectAppendStatus.Completed -> state.value =
+                    PostLoginStatus.PasskeyAppended(result.passkeyDetails?.aaguidName)
+
+                ConnectAppendStatus.Cancelled -> {
+                    if (!autoAppend) {
+                        errorMessage.value =
+                            "You have cancelled setting up your passkey. Please try again."
+                    }
+                }
+
                 else -> skipPasskeyCreation()
             }
             primaryLoading.value = false
+        }
+    }
+
+    suspend fun createPasskeyConditional(activityContext: android.content.Context): Boolean {
+        val result = corbado.completeAppend(activityContext, AppendCompletionType.Conditional)
+
+        return when (result) {
+            is ConnectAppendStatus.Completed -> {
+                state.value =
+                    PostLoginStatus.PasskeyAppended(result.passkeyDetails?.aaguidName)
+                true
+            }
+
+            else -> false
         }
     }
 
@@ -101,7 +144,8 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
 
     private suspend fun hasMFA(): Boolean {
         return suspendCoroutine { continuation ->
-            val plugin = com.amplifyframework.core.Amplify.Auth.getPlugin("awsCognitoAuthPlugin") as AWSCognitoAuthPlugin
+            val plugin =
+                com.amplifyframework.core.Amplify.Auth.getPlugin("awsCognitoAuthPlugin") as AWSCognitoAuthPlugin
             plugin.fetchMFAPreference(
                 { continuation.resume(it.enabled?.isNotEmpty() == true) },
                 { continuation.resume(false) }
@@ -114,4 +158,4 @@ class PostLoginViewModel(application: Application) : AndroidViewModel(applicatio
             _navigationEvents.emit(NavigationEvent.NavigateTo("profile"))
         }
     }
-} 
+}

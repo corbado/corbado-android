@@ -9,12 +9,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 sealed class ConnectAppendStep {
-    data class AskUserForAppend(val autoAppend: Boolean, val type: AppendType) : ConnectAppendStep()
+    data class AskUserForAppend(val autoAppend: Boolean, val type: AppendType, val conditionalAppend: Boolean) : ConnectAppendStep()
     data class Skip(val developerDetails: String) : ConnectAppendStep()
 }
 
 enum class AppendType {
     DefaultAppend
+}
+
+enum class AppendCompletionType {
+    Auto, Conditional, Manual, ManualRetry
 }
 
 sealed class ConnectAppendStatus {
@@ -62,6 +66,10 @@ suspend fun Corbado.isAppendAllowed(connectTokenProvider: suspend (ConnectTokenT
             process = p
             client.setProcessId(p.id)
 
+            initRes.newClientEnvHandle?.let {
+                clientStateService.setClientEnvHandle(it)
+            }
+
             if (!appendData.appendAllowed) {
                 return@withContext ConnectAppendStep.Skip("append not allowed by gradual rollout")
             }
@@ -91,14 +99,16 @@ suspend fun Corbado.isAppendAllowed(connectTokenProvider: suspend (ConnectTokenT
             p.attestationOptions = authController.serializeCreatePublicKeyCredentialRequest(options)
 
             return@withContext ConnectAppendStep.AskUserForAppend(
-                startRsp.autoAppend, AppendType.DefaultAppend
+                startRsp.autoAppend, AppendType.DefaultAppend, startRsp.conditionalAppend
             )
         } catch (e: Exception) {
             return@withContext ConnectAppendStep.Skip("append failed: ${e.toString()}")
         }
     }
 
-suspend fun Corbado.completeAppend(activityContext: Context): ConnectAppendStatus = withContext(Dispatchers.IO) {
+suspend fun Corbado.completeAppend(
+    activityContext: Context, completionType: AppendCompletionType = AppendCompletionType.Manual
+): ConnectAppendStatus = withContext(Dispatchers.IO) {
     val processCopy = process
     if (processCopy == null) {
         val e = IllegalStateException("process is null")
@@ -117,8 +127,9 @@ suspend fun Corbado.completeAppend(activityContext: Context): ConnectAppendStatu
         return@withContext ConnectAppendStatus.Error(e)
     }
 
+    val isConditional = completionType == AppendCompletionType.Conditional
     val authenticatorResponse = try {
-        authController.createPasskey(activityContext, attestationOptions)
+        authController.createPasskey(activityContext, attestationOptions, false, isConditional)
     } catch (e: AuthorizationError) {
         return@withContext when (e) {
             AuthorizationError.Cancelled -> {
@@ -151,7 +162,7 @@ suspend fun Corbado.completeAppend(activityContext: Context): ConnectAppendStatu
         val typedAuthenticatorResponse =
             authController.typeCreatePublicKeyCredentialResponse(authenticatorResponse)
 
-        val finishRsp = client.appendFinish(typedAuthenticatorResponse)
+        val finishRsp = client.appendFinish(typedAuthenticatorResponse, completionType)
 
         finishRsp.passkeyOperation.let {
             val lastLogin = LastLogin.from(it)

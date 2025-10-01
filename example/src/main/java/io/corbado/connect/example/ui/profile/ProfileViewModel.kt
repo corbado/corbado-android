@@ -131,6 +131,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun activateInvitationToken() {
+        corbado.setInvitationToken("inv-token-correct")
+    }
+
     fun signOut() {
         viewModelScope.launch {
             Amplify.Auth.signOut()

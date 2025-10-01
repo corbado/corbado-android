@@ -112,6 +112,12 @@ fun ProfileScreen(navController: NavController, profileViewModel: ProfileViewMod
                     onClick = { profileViewModel.fetchUserData() },
                     modifier = Modifier.testTag("ReloadButton")
                 )
+
+                CorbadoSecondaryButton(
+                    text = "Activate invitation token",
+                    onClick = { profileViewModel.activateInvitationToken() },
+                    modifier = Modifier.testTag("ActivateButton")
+                )
             }
         }
     }

@@ -6,6 +6,7 @@ import com.corbado.connect.core.ManagePasskeyEvent.ManageError
 import com.corbado.connect.core.ManagePasskeyEvent.ManageErrorUnexpected
 import com.corbado.connect.core.ManagePasskeyEvent.ManageLearnMore
 import com.corbado.simplecredentialmanager.AuthorizationError
+import com.corbado.simplecredentialmanager.PublicKeyCredentialSignalAllAcceptedCredentials
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -35,15 +36,29 @@ enum class ManageSituation {
     ClientPasskeyOperationCancelled,
     ClientExcludeCredentialsMatch,
     CboApiPasskeysNotSupportedLight,
-    Unknown
+    Unknown,
+    ClientSignalAllAcceptedCredentialsError
 }
+
+enum class ManageListMode {
+    Default,
+    PostDelete,
+    PostAppend
+}
+
+data class PasskeyListResponse(
+    val passkeys: List<Passkey>,
+    val rpId: String,
+    val userId: String,
+    val signalAllAcceptedCredentials: Boolean
+)
 
 // Manage methods
 suspend fun Corbado.isManageAppendAllowed(connectTokenProvider: suspend (ConnectTokenType) -> String): ConnectManageStep =
     withContext(Dispatchers.IO) {
         try {
             val allowed = manageAllowedStep1()
-            val (passkeys) = getPasskeys(connectTokenProvider)
+            val passkeys = getPasskeys(connectTokenProvider, ManageListMode.Default)
             if (!allowed) {
                 return@withContext ConnectManageStep.NotAllowed(passkeys)
             }
@@ -66,7 +81,10 @@ suspend fun Corbado.isManageAppendAllowed(connectTokenProvider: suspend (Connect
         }
     }
 
-suspend fun Corbado.completePasskeyListAppend(activityContext: Context, connectTokenProvider: suspend (ConnectTokenType) -> String): ConnectManageStatus =
+suspend fun Corbado.completePasskeyListAppend(
+    activityContext: Context,
+    connectTokenProvider: suspend (ConnectTokenType) -> String
+): ConnectManageStatus =
     withContext(Dispatchers.IO) {
         try {
             val connectToken = connectTokenProvider(ConnectTokenType.PasskeyAppend)
@@ -90,7 +108,7 @@ suspend fun Corbado.completePasskeyListAppend(activityContext: Context, connectT
             val attestationOptions =
                 authController.serializeCreatePublicKeyCredentialRequest(rawOptions)
             val authenticatorResponse = try {
-                authController.createPasskey(activityContext, attestationOptions)
+                authController.createPasskey(activityContext, attestationOptions, false, false)
             } catch (e: AuthorizationError) {
                 return@withContext when (e) {
                     AuthorizationError.Cancelled -> {
@@ -125,7 +143,7 @@ suspend fun Corbado.completePasskeyListAppend(activityContext: Context, connectT
             val typedAuthenticatorResponse =
                 authController.typeCreatePublicKeyCredentialResponse(authenticatorResponse)
             val finishRsp = try {
-                client.appendFinish(typedAuthenticatorResponse)
+                client.appendFinish(typedAuthenticatorResponse, AppendCompletionType.Manual)
             } catch (e: Exception) {
                 client.recordManageEvent(
                     ManageErrorUnexpected(e),
@@ -140,7 +158,7 @@ suspend fun Corbado.completePasskeyListAppend(activityContext: Context, connectT
                 clientStateService.setLastLogin(lastLogin)
             }
 
-            val (passkeys) = getPasskeys(connectTokenProvider)
+            val passkeys = getPasskeys(connectTokenProvider, ManageListMode.PostAppend)
             return@withContext ConnectManageStatus.Done(passkeys)
         } catch (e: Exception) {
             client.recordManageEvent(
@@ -167,7 +185,7 @@ suspend fun Corbado.deletePasskey(
         client.manageDelete(connectToken = connectToken, passkeyId = passkeyId)
         clientStateService.clearLastLogin()
 
-        val (passkeys) = getPasskeys(connectTokenProvider)
+        val passkeys = getPasskeys(connectTokenProvider, ManageListMode.PostDelete)
         return@withContext ConnectManageStatus.Done(passkeys)
     } catch (e: ConnectTokenError) {
         client.recordManageEvent(
@@ -190,9 +208,12 @@ suspend fun Corbado.manageRecordLearnMoreEvent() = withContext(Dispatchers.IO) {
 }
 
 @Throws(Exception::class)
-private suspend fun Corbado.getPasskeys(connectTokenProvider: suspend (ConnectTokenType) -> String): Triple<List<Passkey>, String, String> {
+private suspend fun Corbado.getPasskeys(
+    connectTokenProvider: suspend (ConnectTokenType) -> String,
+    mode: ManageListMode
+): List<Passkey> {
     val connectToken = connectTokenProvider(ConnectTokenType.PasskeyList)
-    val res = client.manageList(connectToken)
+    val res = client.manageList(connectToken, mode)
     val passkeys = res.passkeys.map { passkey ->
         Passkey(
             id = passkey.id,
@@ -209,7 +230,25 @@ private suspend fun Corbado.getPasskeys(connectTokenProvider: suspend (ConnectTo
         )
     }
 
-    return Triple(passkeys, res.rpID, res.userID)
+    if (res.signalAllAcceptedCredentials) {
+        val request = PublicKeyCredentialSignalAllAcceptedCredentials(
+            res.rpID,
+            res.userID,
+            res.passkeys.map { it.credentialID }
+        )
+        val requestJson = authController.serializeSignalAllAcceptedCredentialsRequest(request)
+
+        try {
+            authController.signalAllAcceptedCredentials(requestJson)
+        } catch (e: AuthorizationError) {
+            client.recordManageEvent(
+                ManageErrorUnexpected(e),
+                ManageSituation.ClientSignalAllAcceptedCredentialsError
+            )
+        }
+    }
+
+    return passkeys
 }
 
 private suspend fun Corbado.manageAllowedStep1(): Boolean = withContext(Dispatchers.IO) {
@@ -227,7 +266,12 @@ private suspend fun Corbado.manageAllowedStep1(): Boolean = withContext(Dispatch
         frontendApiUrl = initRes.frontendApiUrl,
         manageData = manageData,
     )
+    process = p
+
     client.setProcessId(p.id)
+    initRes.newClientEnvHandle?.let {
+        clientStateService.setClientEnvHandle(it)
+    }
 
     initRes.manageAllowed
 }

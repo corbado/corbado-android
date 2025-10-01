@@ -1,10 +1,12 @@
 package com.corbado.connect.example.ui.signup
 
+import android.app.Activity
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -22,6 +24,7 @@ fun SignUpScreen(navController: NavController, signUpViewModel: SignUpViewModel 
     val password by signUpViewModel.password.collectAsState()
     val isLoading by signUpViewModel.primaryLoading.collectAsState()
     val errorMessage by signUpViewModel.errorMessage.collectAsState()
+    val activity = LocalContext.current as Activity
 
     LaunchedEffect(Unit) {
         signUpViewModel.navigationEvents.collect { event ->
@@ -77,7 +80,7 @@ fun SignUpScreen(navController: NavController, signUpViewModel: SignUpViewModel 
 
         CorbadoPrimaryButton(
             text = "Sign Up",
-            onClick = { signUpViewModel.signUp() },
+            onClick = { signUpViewModel.signUp(activity) },
             isLoading = isLoading,
             modifier = Modifier.testTag("SignUpSubmitButton")
         )
