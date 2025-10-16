@@ -7,6 +7,8 @@ import com.corbado.connect.api.models.PasskeyOperation
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.time.Instant
+import java.time.LocalDateTime
 import java.util.Date
 
 @Serializable
@@ -72,10 +74,13 @@ internal class ClientStateService(context: Context, private val projectId: Strin
     private var cachedClientEnvHandle: ClientStateEntry<String>? = null
     private var cachedInvitationToken: ClientStateEntry<String>? = null
 
+    private var cachedSituationDebounceMap: MutableMap<String, Long> = mutableMapOf()
+
     init {
         cachedLastLogin = getEntryFromUserDefaults(getStorageKeyLastLogin())
         cachedClientEnvHandle = getEntryFromUserDefaults(getStorageKeyClientHandle())
         cachedInvitationToken = getEntryFromUserDefaults(getStorageKeyInvitationToken())
+        cachedSituationDebounceMap = getFromUserDefaults(getStorageKeySituationDebounceMap()) ?: mutableMapOf()
     }
 
     fun getLastLogin(): ClientStateEntry<LastLogin>? {
@@ -123,6 +128,20 @@ internal class ClientStateService(context: Context, private val projectId: Strin
         removeEntryFromUserDefaults(getStorageKeyInvitationToken())
     }
 
+    fun getSituationDebounceMap(): Map<String, Instant>? {
+        return cachedSituationDebounceMap.mapValues { Instant.ofEpochSecond(it.value) }
+    }
+
+    fun setSituationDebounceMapEntry(key: String, value: Instant) {
+        cachedSituationDebounceMap[key] = value.epochSecond
+        setToUserDefaults(cachedSituationDebounceMap, getStorageKeySituationDebounceMap())
+    }
+
+    fun clearSituationDebounceMap() {
+        cachedSituationDebounceMap = mutableMapOf()
+        removeEntryFromUserDefaults(getStorageKeySituationDebounceMap())
+    }
+
     fun clearAll() {
         clearLastLogin()
         clearClientEnvHandle()
@@ -132,8 +151,19 @@ internal class ClientStateService(context: Context, private val projectId: Strin
     private fun getStorageKeyClientHandle(): String = "cbo_client_handle-$projectId"
     private fun getStorageKeyLastLogin(): String = "cbo_connect_last_login-$projectId"
     private fun getStorageKeyInvitationToken(): String = "cbo_connect_invitation_token-$projectId"
+    private fun getStorageKeySituationDebounceMap(): String = "cbo_situation_debounce_map-$projectId"
 
     private inline fun <reified T> getEntryFromUserDefaults(key: String): ClientStateEntry<T>? {
+        val json = prefs.getString(key, null) ?: return null
+        return try {
+            Json.decodeFromString(json)
+        } catch (e: Exception) {
+            // Log error
+            null
+        }
+    }
+
+    private inline fun <reified T> getFromUserDefaults(key: String): T? {
         val json = prefs.getString(key, null) ?: return null
         return try {
             Json.decodeFromString(json)
@@ -149,6 +179,15 @@ internal class ClientStateService(context: Context, private val projectId: Strin
             return
         }
         val json = Json.encodeToString(entry)
+        prefs.edit { putString(key, json) }
+    }
+
+    private inline fun <reified T> setToUserDefaults(data: T?, key: String) {
+        if (data == null) {
+            prefs.edit { remove(key) }
+            return
+        }
+        val json = Json.encodeToString(data)
         prefs.edit { putString(key, json) }
     }
 

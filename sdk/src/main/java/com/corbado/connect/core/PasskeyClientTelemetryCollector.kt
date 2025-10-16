@@ -12,11 +12,11 @@ import com.corbado.connect.api.models.NativeMeta
 import com.corbado.connect.api.models.NativeMetaScreen
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
-import java.math.BigDecimal
+import java.time.Instant
 import java.util.Locale
 
 internal object PasskeyClientTelemetryCollector {
-    fun collectData(context: Context): NativeMeta {
+    fun collectData(context: Context, sdkInitTime: Instant): NativeMeta {
         return try {
             NativeMeta(
                 platform = "Android",
@@ -32,7 +32,8 @@ internal object PasskeyClientTelemetryCollector {
                 brand = Build.BRAND,
                 model = Build.MODEL + "|" + Build.HARDWARE + "|" + Build.DEVICE + "|" + Build.PRODUCT,
                 locale = Locale.getDefault().language + "-" + Locale.getDefault().country,
-                screen = getScreenData(context)
+                screen = getScreenData(context),
+                sdkInitTimeMs = sdkInitTime.toEpochMilli()
             )
         } catch (e: Exception) {
             NativeMeta(

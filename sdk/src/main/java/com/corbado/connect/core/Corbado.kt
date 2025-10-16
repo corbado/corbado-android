@@ -1,6 +1,7 @@
 package com.corbado.connect.core
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import com.corbado.connect.api.models.ClientInformation
 import com.corbado.connect.api.models.ClientStateMeta
 import com.corbado.simplecredentialmanager.AuthorizationController
@@ -9,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.time.Instant
 
 // Placeholder data classes for state management
 internal data class ConnectProcess(
@@ -18,6 +20,7 @@ internal data class ConnectProcess(
     var appendData: ConnectAppendInitData? = null,
     var manageData: ConnectManageInitData? = null,
     var attestationOptions: String? = null,
+    var attestationExpiry: Instant? = null
 )
 
 internal data class ConnectLoginInitData(
@@ -70,18 +73,19 @@ class Corbado(
     projectId: String,
     private val context: Context,
     frontendApiUrlSuffix: String? = null,
-    authorizationController: AuthorizationController? = null,
     internal val useOneTap: Boolean = true
 ) {
     internal val client: CorbadoClient
     internal val clientStateService: ClientStateService
-    internal var authController: AuthorizationController
+    @VisibleForTesting
+    var authController: AuthorizationController
     internal var process: ConnectProcess? = null
+    internal val sdkInitTime: Instant = Instant.now()
 
     init {
         client = CorbadoClient(projectId, frontendApiUrlSuffix)
         clientStateService = ClientStateService(context, projectId)
-        authController = authorizationController ?: RealAuthorizationController(context)
+        authController = RealAuthorizationController(context)
     }
 
     // Control methods
@@ -110,6 +114,10 @@ class Corbado(
         client.setProcessId(null)
     }
 
+    fun clearSituationDebounce() {
+        clientStateService.clearSituationDebounceMap()
+    }
+
     suspend fun recordLocalUnlock() = withContext(Dispatchers.IO) {
         client.recordLoginEvent(LoginPasskeyEvent.LocalUnlock)
     }
@@ -124,7 +132,7 @@ class Corbado(
             clientEnvHandle = clientEnvHandleEntry?.data,
             isNative = true,
             clientEnvHandleMeta = clientStateMeta,
-            nativeMeta = PasskeyClientTelemetryCollector.collectData(context)
+            nativeMeta = PasskeyClientTelemetryCollector.collectData(context, sdkInitTime)
         )
     }
 } 

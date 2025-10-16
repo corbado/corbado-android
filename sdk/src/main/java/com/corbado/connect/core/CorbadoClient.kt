@@ -1,6 +1,5 @@
 package com.corbado.connect.core
 
-import android.R
 import com.corbado.connect.api.models.ClientInformation
 import com.corbado.connect.api.models.ConnectAppendFinishReq
 import com.corbado.connect.api.models.ConnectAppendFinishRsp
@@ -23,21 +22,24 @@ import com.corbado.connect.api.models.ConnectManageListReq
 import com.corbado.connect.api.models.ConnectManageListRsp
 import com.corbado.connect.api.models.PasskeyEventType
 import com.corbado.connect.api.v1.CorbadoConnectApi
-import com.corbado.connect.api.models.AppendCompletionType as ApiAppendCompletionType
 import com.corbado.simplecredentialmanager.PublicKeyCredentialAssertion
 import com.corbado.simplecredentialmanager.PublicKeyCredentialRegistration
 import com.corbado.simplecredentialmanager.RPPlatformPublicKeyCredentialAssertion
 import com.corbado.simplecredentialmanager.RPPlatformPublicKeyCredentialRegistration
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
+import java.time.Instant
 import java.util.concurrent.TimeUnit
+import com.corbado.connect.api.models.AppendCompletionType as ApiAppendCompletionType
 
 data class AppendStartResult(
     val options: PublicKeyCredentialRegistration?,
     val variant: ConnectAppendStartRsp.Variant,
     val isRestrictedBrowser: Boolean,
     val autoAppend: Boolean,
-    val conditionalAppend: Boolean
+    val conditionalAppend: Boolean,
+    val expiresAt: Instant,
+    val customData: Map<String, String>? = null
 )
 
 sealed class LoginPasskeyEvent {
@@ -154,11 +156,12 @@ internal class CorbadoClient(
         return corbadoConnectApi.connectLoginFinish(req)
     }
 
-    fun appendInit(clientInfo: ClientInformation, invitationToken: String?): ConnectAppendInitRsp {
+    fun appendInit(clientInfo: ClientInformation, invitationToken: String?, situation: String? = null): ConnectAppendInitRsp {
         val req = ConnectAppendInitReq(
             clientInformation = clientInfo,
             flags = mapOf(),
-            invitationToken = invitationToken
+            invitationToken = invitationToken,
+            situation = situation
         )
         return corbadoConnectApi.connectAppendInit(req)
     }
@@ -166,11 +169,13 @@ internal class CorbadoClient(
     fun appendStart(
         connectToken: String,
         forcePasskeyAppend: Boolean,
+        situation: String? = null
     ): AppendStartResult {
         val req = ConnectAppendStartReq(
             appendTokenValue = connectToken,
             forcePasskeyAppend = forcePasskeyAppend,
-            loadedMs = 0
+            loadedMs = 0,
+            situation = situation
         )
 
         val res = corbadoConnectApi.connectAppendStart(req)
@@ -182,13 +187,16 @@ internal class CorbadoClient(
             variant = res.variant,
             isRestrictedBrowser = res.isRestrictedBrowser,
             autoAppend = res.autoAppend,
-            conditionalAppend = res.conditionalAppend
+            conditionalAppend = res.conditionalAppend,
+            expiresAt = Instant.ofEpochMilli(res.expiresMs),
+            customData = res.customData
         )
     }
 
     fun appendFinish(
         authenticatorResponse: RPPlatformPublicKeyCredentialRegistration,
-        completionType: AppendCompletionType
+        completionType: AppendCompletionType,
+        customData: Map<String, String>? = null
     ): ConnectAppendFinishRsp {
         val attestationResponse = RPPlatformPublicKeyCredentialRegistration(
             id = authenticatorResponse.id,
@@ -215,7 +223,8 @@ internal class CorbadoClient(
         }
         val req = ConnectAppendFinishReq(
             attestationResponse = serializedAttestationResponse,
-            completionType = apiAppendCompletionType
+            completionType = apiAppendCompletionType,
+            customData = customData
         )
         return corbadoConnectApi.connectAppendFinish(req)
     }

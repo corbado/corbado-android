@@ -6,7 +6,6 @@ import com.corbado.connect.core.ManagePasskeyEvent.ManageError
 import com.corbado.connect.core.ManagePasskeyEvent.ManageErrorUnexpected
 import com.corbado.connect.core.ManagePasskeyEvent.ManageLearnMore
 import com.corbado.simplecredentialmanager.AuthorizationError
-import com.corbado.simplecredentialmanager.PublicKeyCredentialSignalAllAcceptedCredentials
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -92,6 +91,7 @@ suspend fun Corbado.completePasskeyListAppend(
                 client.appendStart(
                     connectToken = connectToken,
                     forcePasskeyAppend = true,
+                    situation = AppendSituationType.PasskeyList.rawValue
                 )
             } catch (e: Exception) {
                 client.recordManageEvent(
@@ -108,7 +108,7 @@ suspend fun Corbado.completePasskeyListAppend(
             val attestationOptions =
                 authController.serializeCreatePublicKeyCredentialRequest(rawOptions)
             val authenticatorResponse = try {
-                authController.createPasskey(activityContext, attestationOptions, false, false)
+                authController.createPasskey(activityContext, attestationOptions, false)
             } catch (e: AuthorizationError) {
                 return@withContext when (e) {
                     AuthorizationError.Cancelled -> {
@@ -230,6 +230,7 @@ private suspend fun Corbado.getPasskeys(
         )
     }
 
+    /*
     if (res.signalAllAcceptedCredentials) {
         val request = PublicKeyCredentialSignalAllAcceptedCredentials(
             res.rpID,
@@ -246,7 +247,7 @@ private suspend fun Corbado.getPasskeys(
                 ManageSituation.ClientSignalAllAcceptedCredentialsError
             )
         }
-    }
+    }*/
 
     return passkeys
 }

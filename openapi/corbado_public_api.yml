@@ -1436,6 +1436,8 @@ components:
             type: string
         invitationToken:
           type: string
+        situation:
+          type: string
 
     connectAppendInitRsp:
       type: object
@@ -1477,6 +1479,8 @@ components:
         loadedMs:
           type: integer
           format: int64
+        situation:
+          type: string
 
     connectAppendStartRsp:
       type: object
@@ -1486,6 +1490,7 @@ components:
         - isRestrictedBrowser
         - autoAppend
         - conditionalAppend
+        - expiresMs
       properties:
         attestationOptions:
           type: string
@@ -1501,6 +1506,13 @@ components:
           type: boolean
         conditionalAppend:
           type: boolean
+        expiresMs:
+          type: integer
+          format: int64
+        customData:
+          type: object
+          additionalProperties:
+            type: string
 
     connectAppendFinishReq:
       type: object
@@ -1512,6 +1524,10 @@ components:
           type: string
         completionType:
           $ref: "#/components/schemas/appendCompletionType"
+        customData:
+          type: object
+          additionalProperties:
+            type: string
 
     connectAppendFinishRsp:
       type: object
@@ -2229,6 +2245,9 @@ components:
           type: string
         screen:
           $ref: "#/components/schemas/nativeMetaScreen"
+        sdkInitTimeMs:
+          type: integer
+          format: int64
 
     nativeMetaScreen:
       type: object
