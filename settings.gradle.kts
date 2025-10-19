@@ -10,7 +10,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        mavenLocal()
     }
 }
 
@@ -18,3 +17,4 @@ rootProject.name = "corbado-android"
 include(":api")
 include(":sdk")
 include(":example")
+

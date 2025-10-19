@@ -36,8 +36,10 @@ android {
 
 dependencies {
     implementation(project(":api"))
-    api(libs.simple.credential.manager)
+    implementation(libs.simple.credential.manager)
     implementation(libs.okhttp)
+    compileOnly(kotlin("stdlib"))
+    runtimeOnly(kotlin("stdlib"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -57,7 +59,7 @@ mavenPublishing {
     publishToMavenCentral()
     signAllPublications()
 
-    coordinates("com.corbado", "connect-core", "0.2.1")
+    coordinates("com.corbado", "connect-core", "1.3.0")
 
     pom {
         name.set("Corbado Connect SDK")

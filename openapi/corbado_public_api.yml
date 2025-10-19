@@ -31,18 +31,35 @@ tags:
     description: All API calls to manage users
   - name: CorbadoConnect
     description: All API calls that are related to a connect process
+  - name: OIDC
+    description: All API calls that are related to OpenID Connect
 
 paths:
+  /v2/process-config:
+    get:
+      summary: Retrieve process configuration
+      description: Retrieves the process configuration settings.
+      operationId: GetProcessConfig
+      tags:
+        - Configs
+      responses:
+        "200":
+          description: Process configuration settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/processConfigRsp"
+
   /v2/session-config:
     get:
-      summary: Get Session Configuration
-      description: Retrieves the session configuration settings
+      summary: Retrieve session configuration
+      description: Retrieves the session configuration settings.
       operationId: GetSessionConfig
       tags:
         - Configs
       responses:
         "200":
-          description: tbd
+          description: Session configuration settings.
           content:
             application/json:
               schema:
@@ -50,14 +67,14 @@ paths:
 
   /v2/user-details-config:
     get:
-      summary: Get User Details Configuration
-      description: Gets configs needed by the UserDetails component
+      summary: Retrieve user details configuration
+      description: Retrieves user details configuration needed by the UserDetails component.
       operationId: GetUserDetailsConfig
       tags:
         - Configs
       responses:
         "200":
-          description: tbd
+          description: User details configuration.
           content:
             application/json:
               schema:
@@ -65,8 +82,9 @@ paths:
 
   /v2/me:
     get:
-      summary: Get Current User
-      description: Gets current user
+      summary: Retrieve current user
+      description: |
+        Retrieves data of currently logged in user including their [login identifiers](/api-reference/backend-api/loginidentifiers/create-a-login-identifier-for-a-user) and [social logins](/api-reference/backend-api/users/create-a-social-login-for-a-user).
       operationId: CurrentUserGet
       tags:
         - Users
@@ -78,8 +96,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/meRsp"
     patch:
-      summary: Update Current User
-      description: Updates current user
+      summary: Update current User
+      description: |
+        Updates data of currently logged in user.
       operationId: CurrentUserUpdate
       tags:
         - Users
@@ -93,8 +112,9 @@ paths:
         "200":
           $ref: "#/components/responses/200"
     delete:
-      summary: Delete Current User
-      description: Deletes current user
+      summary: Delete current user
+      description: |
+        Deletes currently logged in user.
       operationId: CurrentUserDelete
       tags:
         - Users
@@ -104,8 +124,9 @@ paths:
 
   /v2/me/passkeys:
     get:
-      summary: Get User Passkeys
-      description: Gets current user's passkeys
+      summary: List all user passkeys
+      description: |
+        Returns a list of passkeys for the currently logged in user.
       operationId: CurrentUserPasskeyGet
       tags:
         - Users
@@ -119,8 +140,9 @@ paths:
 
   /v2/me/passkeys/append/start:
     post:
-      summary: Start Passkey Append
-      description: Starts passkey append for current user
+      summary: Start passkey append
+      description: |
+        Starts passkey append for currently logged in user.
       operationId: CurrentUserPasskeyAppendStart
       tags:
         - Users
@@ -140,8 +162,9 @@ paths:
 
   /v2/me/passkeys/append/finish:
     post:
-      summary: Finish Passkey Append
-      description: Finishes passkey append for current user
+      summary: Finish passkey append
+      description: |
+        Finishes passkey append for currently logged in user.
       operationId: CurrentUserPasskeyAppendFinish
       tags:
         - Users
@@ -157,8 +180,9 @@ paths:
 
   /v2/me/passkeys/{credentialID}:
     delete:
-      summary: Delete User Passkey
-      description: Delete current user's passkeys
+      summary: Delete user passkey
+      description: |
+        Deletes a passkey for the currently logged in user.
       operationId: CurrentUserPasskeyDelete
       tags:
         - Users
@@ -168,8 +192,8 @@ paths:
           name: credentialID
           schema:
             type: string
-          description: "Credential ID from passkeys"
-          example: "cre-abc123"
+          description: Unique identifier of the passkey.
+          example: "cre-940364795071150919"
       responses:
         "200":
           description: tbs
@@ -180,8 +204,11 @@ paths:
 
   /v2/me/refresh:
     post:
-      summary: Refresh Session
-      description: Performs session refresh
+      summary: Refresh user session
+      description: |
+        Performs session refresh of currently logged in user. Issues a new session-token if session is still valid.
+        
+        Manage users sessions in the [Developer Panel](https://app.corbado.com/users/sessions) or consult the [Documentation](https://docs.corbado.com/corbado-complete/sessions/overview) for more details.
       operationId: CurrentUserSessionRefresh
       tags:
         - Users
@@ -195,8 +222,11 @@ paths:
 
   /v2/me/logout:
     post:
-      summary: Logout User
-      description: Performs session logout
+      summary: Logout user
+      description: |
+        Performs session logout of currently logged in user.
+        
+        Manage users sessions in the [Developer Panel](https://app.corbado.com/users/sessions) or consult the [Documentation](https://docs.corbado.com/corbado-complete/sessions/overview) for more details.
       operationId: CurrentUserSessionLogout
       tags:
         - Users
@@ -206,8 +236,9 @@ paths:
 
   /v2/me/identifier:
     post:
-      summary: Create Identifier
-      description: Creates an identifier
+      summary: Create login identifier
+      description: |
+        Creates a login identifier for the currently logged in user.
       operationId: CurrentUserIdentifierCreate
       tags:
         - Users
@@ -221,8 +252,9 @@ paths:
         "200":
           $ref: "#/components/responses/200"
     delete:
-      summary: Delete Identifier
-      description: Deletes an identifier
+      summary: Delete login identifier
+      description: |
+        Deletes a login identifier for the currently logged in user.
       operationId: CurrentUserIdentifierDelete
       tags:
         - Users
@@ -236,8 +268,9 @@ paths:
         "200":
           $ref: "#/components/responses/200"
     patch:
-      summary: Update Identifier
-      description: Modifies an identifier (only permitted for username; identifierID will change)
+      summary: Update login identifier
+      description: |
+        Updates a login identifier for the currently logged in user.
       operationId: CurrentUserIdentifierUpdate
       tags:
         - Users
@@ -253,8 +286,9 @@ paths:
 
   /v2/me/identifier/verify/start:
     post:
-      summary: Start Identifier Verification
-      description: Creates challenge (only email otp and phone otp supported for now)
+      summary: Start login identifier verification
+      description: |
+        Starts login identifer verification of currently logged in user.
       operationId: CurrentUserIdentifierVerifyStart
       tags:
         - Users
@@ -270,8 +304,9 @@ paths:
 
   /v2/me/identifier/verify/finish:
     post:
-      summary: Finish Identifier Verification
-      description: Verifies challenge
+      summary: Finish login identifier verification
+      description: |
+        Finishes login identifer verification of currently logged in user.
       operationId: CurrentUserIdentifierVerifyFinish
       tags:
         - Users
@@ -287,8 +322,8 @@ paths:
 
   /v2/auth/process/init:
     post:
-      summary: Initialize Authentication Process
-      description: Initializes a new authentication process
+      summary: Initialize authentication process
+      description: Initializes a new authentication process.
       operationId: ProcessInit
       tags:
         - Auth
@@ -308,8 +343,8 @@ paths:
 
   /v2/auth/process:
     get:
-      summary: Get Authentication Process
-      description: Retrieves the current authentication process state
+      summary: Retrieve authentication process
+      description: Retrieves the current authentication process state.
       operationId: ProcessGet
       tags:
         - Auth
@@ -329,8 +364,8 @@ paths:
 
   /v2/auth/process/complete:
     post:
-      summary: Complete Authentication Process
-      description: Completes the current authentication process
+      summary: Complete authentication process
+      description: Completes the current authentication process.
       operationId: ProcessComplete
       tags:
         - Auth
@@ -344,8 +379,8 @@ paths:
 
   /v2/auth/process/reset:
     post:
-      summary: Reset Authentication Process
-      description: Resets the current authentication process
+      summary: Reset authentication process
+      description: Resets the current authentication process.
       operationId: ProcessReset
       tags:
         - Auth
@@ -359,8 +394,8 @@ paths:
 
   /v2/auth/signup/init:
     post:
-      summary: Initialize Signup
-      description: Initializes a new user signup process
+      summary: Initialize signup
+      description: Initializes a new user signup process.
       operationId: SignupInit
       tags:
         - Auth
@@ -380,8 +415,8 @@ paths:
 
   /v2/auth/login/init:
     post:
-      summary: Initialize Login
-      description: Initializes a new login process
+      summary: Initialize login
+      description: Initializes a new login process.
       operationId: LoginInit
       tags:
         - Auth
@@ -401,8 +436,8 @@ paths:
 
   /v2/auth/block/skip:
     post:
-      summary: Skip Authentication Block
-      description: Skips the current authentication block
+      summary: Skip authentication block
+      description: Skips the current authentication block.
       operationId: BlockSkip
       tags:
         - Auth
@@ -416,8 +451,8 @@ paths:
 
   /v2/auth/passkey/append/start:
     post:
-      summary: Start Passkey Append
-      description: Starts the process of appending a new passkey
+      summary: Start passkey append
+      description: Starts the process of appending a new passkey.
       operationId: PasskeyAppendStart
       tags:
         - Auth
@@ -437,8 +472,8 @@ paths:
 
   /v2/auth/passkey/append/finish:
     post:
-      summary: Finish Passkey Append
-      description: Completes the process of appending a new passkey
+      summary: Finish passkey append
+      description: Completes the process of appending a new passkey.
       operationId: PasskeyAppendFinish
       tags:
         - Auth
@@ -458,8 +493,8 @@ paths:
 
   /v2/auth/passkey/login/start:
     post:
-      summary: Start Passkey Login
-      description: Initiates the passkey login process
+      summary: Start passkey login
+      description: Initiates the passkey login process.
       operationId: PasskeyLoginStart
       tags:
         - Auth
@@ -479,8 +514,8 @@ paths:
 
   /v2/auth/passkey/login/finish:
     post:
-      summary: Finish Passkey Login
-      description: Completes the passkey login process
+      summary: Finish passkey login
+      description: Completes the passkey login process.
       operationId: PasskeyLoginFinish
       tags:
         - Auth
@@ -500,8 +535,8 @@ paths:
 
   /v2/auth/passkey/mediation/finish:
     post:
-      summary: Finish Passkey Mediation
-      description: Completes the passkey mediation process
+      summary: Finish passkey mediation
+      description: Completes the passkey mediation process.
       operationId: PasskeyMediationFinish
       tags:
         - Auth
@@ -521,8 +556,8 @@ paths:
 
   /v2/auth/identifier/verify/start:
     post:
-      summary: Start Identifier Verification
-      description: Initiates the identifier verification process
+      summary: Start identifier verification
+      description: Initiates the identifier verification process.
       operationId: IdentifierVerifyStart
       tags:
         - Auth
@@ -542,8 +577,8 @@ paths:
 
   /v2/auth/identifier/verify/finish:
     post:
-      summary: Finish Identifier Verification
-      description: Completes the identifier verification process
+      summary: Finish identifier verification
+      description: Completes the identifier verification process.
       operationId: IdentifierVerifyFinish
       tags:
         - Auth
@@ -563,8 +598,8 @@ paths:
 
   /v2/auth/identifier/verify/status:
     get:
-      summary: Get Identifier Verification Status
-      description: Retrieves the current status of identifier verification
+      summary: Retrieve identifier verification status
+      description: Retrieves the current status of identifier verification.
       operationId: IdentifierVerifyStatus
       tags:
         - Auth
@@ -578,8 +613,8 @@ paths:
 
   /v2/auth/identifier/update:
     post:
-      summary: Update Identifier
-      description: Updates the user's identifier information
+      summary: Update identifier
+      description: Updates the user's identifier information.
       operationId: IdentifierUpdate
       tags:
         - Auth
@@ -599,8 +634,8 @@ paths:
 
   /v2/auth/social/verify/start:
     post:
-      summary: Start Social Verification
-      description: Initiates the social authentication verification process
+      summary: Start social verification
+      description: Initiates the social authentication verification process.
       operationId: SocialVerifyStart
       tags:
         - Auth
@@ -620,8 +655,8 @@ paths:
 
   /v2/auth/social/verify/callback:
     get:
-      summary: Social Verification Callback
-      description: Handles the callback from social authentication providers
+      summary: Social verification callback
+      description: Handles the callback from social authentication providers.
       operationId: SocialVerifyCallback
       tags:
         - Auth
@@ -631,8 +666,8 @@ paths:
 
   /v2/auth/social/verify/finish:
     post:
-      summary: Finish Social Verification
-      description: Completes the social authentication verification process
+      summary: Finish social verification
+      description: Completes the social authentication verification process.
       operationId: SocialVerifyFinish
       tags:
         - Auth
@@ -652,8 +687,8 @@ paths:
 
   /v2/auth/events:
     post:
-      summary: Create Authentication Event
-      description: Creates a new user generated complete event
+      summary: Create authentication event
+      description: Creates a new user generated complete event.
       operationId: EventCreate
       tags:
         - Auth
@@ -669,8 +704,8 @@ paths:
 
   /v2/connect/login/init:
     post:
-      summary: Initialize Connect Login
-      description: Initializes a connect process for login
+      summary: Initialize connect login
+      description: Initializes a [Corbado Connect](https://docs.corbado.com/corbado-connect) process for login.
       operationId: ConnectLoginInit
       tags:
         - CorbadoConnect
@@ -690,8 +725,8 @@ paths:
 
   /v2/connect/login/start:
     post:
-      summary: Start Connect Login
-      description: Starts an initialized connect login process
+      summary: Start connect login
+      description: Starts an initialized [Corbado Connect](https://docs.corbado.com/corbado-connect) login process.
       operationId: ConnectLoginStart
       tags:
         - CorbadoConnect
@@ -713,8 +748,8 @@ paths:
 
   /v2/connect/login/finish:
     post:
-      summary: Finish Connect Login
-      description: Finishes an initialized connect login process
+      summary: Finish connect login
+      description: Finishes an initialized [Corbado Connect](https://docs.corbado.com/corbado-connect) login process.
       operationId: ConnectLoginFinish
       tags:
         - CorbadoConnect
@@ -736,8 +771,8 @@ paths:
 
   /v2/connect/append/init:
     post:
-      summary: Initialize Connect Append
-      description: Initializes a connect process for passkey append
+      summary: Initialize connect append
+      description: Initializes a [Corbado Connect](https://docs.corbado.com/corbado-connect) process for passkey append.
       operationId: ConnectAppendInit
       tags:
         - CorbadoConnect
@@ -757,8 +792,8 @@ paths:
 
   /v2/connect/append/start:
     post:
-      summary: Start Connect Append
-      description: Starts an initialized connect passkey append process
+      summary: Start connect append
+      description: Starts an initialized [Corbado Connect](https://docs.corbado.com/corbado-connect) passkey append process.
       operationId: ConnectAppendStart
       tags:
         - CorbadoConnect
@@ -778,8 +813,8 @@ paths:
 
   /v2/connect/append/finish:
     post:
-      summary: Finish Connect Append
-      description: Finishes an initialized connect passkey append process
+      summary: Finish connect append
+      description: Finishes an initialized [Corbado Connect](https://docs.corbado.com/corbado-connect) passkey append process.
       operationId: ConnectAppendFinish
       tags:
         - CorbadoConnect
@@ -799,8 +834,8 @@ paths:
 
   /v2/connect/manage/init:
     post:
-      summary: Initialize Connect Management
-      description: Initializes a connect process for passkey management
+      summary: Initialize connect management
+      description: Initializes a [Corbado Connect](https://docs.corbado.com/corbado-connect) process for passkey management.
       operationId: ConnectManageInit
       tags:
         - CorbadoConnect
@@ -820,8 +855,8 @@ paths:
 
   /v2/connect/manage/delete:
     post:
-      summary: Delete Connect Passkey
-      description: Deletes a passkey for a user identified by a connect token
+      summary: Delete connect passkey
+      description: Deletes a passkey for a user identified by a [Corbado Connect](https://docs.corbado.com/corbado-connect) token.
       operationId: ConnectManageDelete
       tags:
         - CorbadoConnect
@@ -841,8 +876,8 @@ paths:
 
   /v2/connect/manage/list:
     post:
-      summary: List Connect Passkeys
-      description: Lists all passkeys for a user identifier by a connect token
+      summary: List connect passkeys
+      description: Lists all passkeys for a user identifier by a [Corbado Connect](https://docs.corbado.com/corbado-connect) token.
       operationId: ConnectManageList
       tags:
         - CorbadoConnect
@@ -862,8 +897,8 @@ paths:
 
   /v2/connect/events:
     post:
-      summary: Create Connect Event
-      description: Creates a new user generated connect event
+      summary: Create connect event
+      description: Creates a new user generated [Corbado Connect](https://docs.corbado.com/corbado-connect) event.
       operationId: ConnectEventCreate
       tags:
         - CorbadoConnect
@@ -879,8 +914,8 @@ paths:
 
   /v2/connect/process/clear:
     post:
-      summary: Clear Connect Process
-      description: Remove process state for a connect process
+      summary: Clear connect process
+      description: Remove process state for a [Corbado Connect](https://docs.corbado.com/corbado-connect) process.
       operationId: ConnectProcessClear
       tags:
         - CorbadoConnect
@@ -900,6 +935,24 @@ paths:
         "404":
           description: No process was found for the token
 
+  /v2/oidc/userInfo:
+    get:
+      summary: OIDC user info
+      description: Retrieves user information in accordance with the OpenID Connect (OIDC) standard.
+      operationId: OIDCUserInfoGet
+      tags:
+        - OIDC
+      responses:
+        "200":
+          description: User information as per OIDC standard.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/oidcUserInfoRsp"
+        "401":
+          description: Unauthorized - Invalid or missing token
+
+
 components:
   ###################################################################
   # Security schemes                                                #
@@ -912,11 +965,23 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: |
+        After a user logs in successfully, a session is created and a JWT token is returned.
+        This token represents the user's authenticated session.
+        It must be included in the `Authorization` header as a Bearer token for all protected endpoints:
+        
+        `Authorization: Bearer <your-token>`
+        
+        The server will validate this token to authorize access.
     projectID:
+      type: apiKey
       in: header
       name: X-Corbado-ProjectID
-      type: apiKey
-
+      description: |
+        Identifies your project context for Corbado.
+        Include this in the request headers as:
+        
+        `X-Corbado-ProjectID: <your-project-id>`
   schemas:
     processInitReq:
       type: object
@@ -1018,7 +1083,7 @@ components:
           type: string
         appendNotAllowedReason:
           type: string
-          enum: ["passkey_already_exists", "passkeys_not_supported"]
+          enum: [ "passkey_already_exists", "passkeys_not_supported" ]
         attestationOptions:
           type: string
           example: '{"publicKey":{"challenge":"2m6...0w9/MgW...KE=","rp":{"name":"demo","id":"localhost"},"user":{"name":"example@mail.com","id":"dXN...zk5"},"pubKeyCredParams":[{"type":"public-key","alg":-7},{"type":"public-key","alg":-35},{"type":"public-key","alg":-36},{"type":"public-key","alg":-257},{"type":"public-key","alg":-258},{"type":"public-key","alg":-259},{"type":"public-key","alg":-37},{"type":"public-key","alg":-38},{"type":"public-key","alg":-39},{"type":"public-key","alg":-8}],"authenticatorSelection":{"authenticatorAttachment":"platform","requireResidentKey":false,"userVerification":"required"},"timeout":60000,"attestation":"none"}}'
@@ -1139,7 +1204,6 @@ components:
         - code
         - identifierType
         - verificationType
-        - isNewDevice
       properties:
         code:
           type: string
@@ -1147,8 +1211,6 @@ components:
           $ref: "#/components/schemas/loginIdentifierType"
         verificationType:
           $ref: "#/components/schemas/verificationMethod"
-        isNewDevice:
-          type: boolean
 
     socialVerifyStartReq:
       type: object
@@ -1176,6 +1238,17 @@ components:
         identifierType:
           $ref: "#/components/schemas/loginIdentifierType"
         value:
+          type: string
+
+    processConfigRsp:
+      type: object
+      required:
+        - useServerSideProcessId
+        - frontendApiUrl
+      properties:
+        useServerSideProcessId:
+          type: boolean
+        frontendApiUrl:
           type: string
 
     sessionConfigRsp:
@@ -1266,6 +1339,8 @@ components:
           type: string
         newClientEnvHandle:
           type: string
+        newClientState:
+          type: string
         expiresAt:
           type: integer
           format: int64
@@ -1291,7 +1366,7 @@ components:
           type: string
         source:
           type: string
-          enum: ["one-tap", "text-field", "error-soft", "error-hard"]
+          enum: [ "one-tap", "text-field", "error-soft", "error-hard" ]
         loadedMs:
           type: integer
           format: int64
@@ -1361,6 +1436,8 @@ components:
             type: string
         invitationToken:
           type: string
+        situation:
+          type: string
 
     connectAppendInitRsp:
       type: object
@@ -1386,6 +1463,8 @@ components:
           type: object
           additionalProperties:
             type: string
+        newClientState:
+          type: string
 
     connectAppendStartReq:
       type: object
@@ -1400,6 +1479,8 @@ components:
         loadedMs:
           type: integer
           format: int64
+        situation:
+          type: string
 
     connectAppendStartRsp:
       type: object
@@ -1408,6 +1489,8 @@ components:
         - variant
         - isRestrictedBrowser
         - autoAppend
+        - conditionalAppend
+        - expiresMs
       properties:
         attestationOptions:
           type: string
@@ -1421,14 +1504,30 @@ components:
           type: boolean
         autoAppend:
           type: boolean
+        conditionalAppend:
+          type: boolean
+        expiresMs:
+          type: integer
+          format: int64
+        customData:
+          type: object
+          additionalProperties:
+            type: string
 
     connectAppendFinishReq:
       type: object
       required:
         - attestationResponse
+        - completionType
       properties:
         attestationResponse:
           type: string
+        completionType:
+          $ref: "#/components/schemas/appendCompletionType"
+        customData:
+          type: object
+          additionalProperties:
+            type: string
 
     connectAppendFinishRsp:
       type: object
@@ -1496,6 +1595,9 @@ components:
       properties:
         connectToken:
           type: string
+        mode:
+          type: string
+          enum: [ "default", "post-delete", "post-append" ]
 
     connectManageListRsp:
       type: object
@@ -1503,6 +1605,7 @@ components:
         - passkeys
         - rpID
         - userID
+        - signalAllAcceptedCredentials
       properties:
         passkeys:
           type: array
@@ -1512,6 +1615,8 @@ components:
           type: string
         userID:
           type: string
+        signalAllAcceptedCredentials:
+          type: boolean
 
     connectManageDeleteRsp:
       type: object
@@ -1564,7 +1669,15 @@ components:
           type: array
           items:
             type: string
-            enum: ["usb", "nfc", "ble", "internal", "hybrid", "smart-card"]
+            enum:
+              [
+                "usb",
+                "nfc",
+                "ble",
+                "internal",
+                "hybrid",
+                "smart-card"
+              ]
         backupEligible:
           type: boolean
         backupState:
@@ -1582,7 +1695,7 @@ components:
           $ref: "common.yml#/components/schemas/created"
         status:
           type: string
-          enum: ["pending", "active"]
+          enum: [ "pending", "active" ]
           description: "Status"
         aaguidDetails:
           $ref: "#/components/schemas/aaguidDetails"
@@ -1615,6 +1728,18 @@ components:
       properties:
         processId:
           type: string
+
+    oidcUserInfoRsp:
+      type: object
+      required:
+        - sub
+      properties:
+        sub:
+          type: string
+        email:
+          type: string
+        email_verified:
+          type: boolean
 
     aaguidDetails:
       type: object
@@ -1697,7 +1822,7 @@ components:
           type: boolean
         sameSite:
           type: string
-          enum: ["lax", "strict", "none"]
+          enum: [ "lax", "strict", "none" ]
         path:
           type: string
         lifetimeSeconds:
@@ -1718,7 +1843,7 @@ components:
           type: boolean
         sameSite:
           type: string
-          enum: ["lax", "strict", "none"]
+          enum: [ "lax", "strict", "none" ]
         path:
           type: string
         lifetimeSeconds:
@@ -1801,7 +1926,7 @@ components:
 
     loginIdentifierType:
       type: string
-      enum: [email, phone, username]
+      enum: [ email, phone, username ]
 
     passkeyEventType:
       type: string
@@ -1824,7 +1949,7 @@ components:
           manage-error,
           manage-learn-more,
           manage-credential-exists,
-          local-unlock,
+          local-unlock
         ]
 
     blockType:
@@ -1842,20 +1967,20 @@ components:
           passkey-verify,
           conditional-ui-completed,
           post-signup-email-verify,
-          passkey-append-after-hybrid,
+          passkey-append-after-hybrid
         ]
 
     authType:
       type: string
-      enum: [signup, login]
+      enum: [ signup, login ]
 
     verificationMethod:
       type: string
-      enum: [email-link, email-otp, phone-otp]
+      enum: [ email-link, email-otp, phone-otp ]
 
     passkeyIconSet:
       type: string
-      enum: [default, apple, android, windows]
+      enum: [ default, apple, android, windows ]
 
     generalBlockSignupInit:
       type: object
@@ -1934,7 +2059,13 @@ components:
           $ref: "#/components/schemas/passkeyIconSet"
         variant:
           type: string
-          enum: ["default", "after-hybrid", "after-error", "after-no-credential"]
+          enum:
+            [
+              "default",
+              "after-hybrid",
+              "after-error",
+              "after-no-credential"
+            ]
 
     generalBlockPasskeyVerify:
       type: object
@@ -1951,7 +2082,7 @@ components:
           type: string
         loginHint:
           type: string
-          enum: ["cda"]
+          enum: [ "cda" ]
 
     generalBlockPasskeyAppended:
       type: object
@@ -2072,7 +2203,7 @@ components:
           format: int64
         source:
           type: string
-          enum: ["ls", "url", "native"]
+          enum: [ "ls", "url", "native" ]
 
     nativeMeta:
       type: object
@@ -2095,7 +2226,7 @@ components:
           type: string
         deviceOwnerAuth:
           type: string
-          enum: ["none", "code", "biometrics"]
+          enum: [ "none", "code", "biometrics" ]
         isBluetoothAvailable:
           type: boolean
         isBluetoothOn:
@@ -2106,6 +2237,34 @@ components:
           type: boolean
         error:
           type: string
+        brand:
+          type: string
+        model:
+          type: string
+        locale:
+          type: string
+        screen:
+          $ref: "#/components/schemas/nativeMetaScreen"
+        sdkInitTimeMs:
+          type: integer
+          format: int64
+
+    nativeMetaScreen:
+      type: object
+      required:
+        - widthPoints
+        - heightPoints
+        - scale
+      properties:
+        widthPoints:
+          type: number
+          format: float
+        heightPoints:
+          type: number
+          format: float
+        scale:
+          type: number
+          format: float
 
     clientCapabilities:
       type: object
@@ -2145,14 +2304,14 @@ components:
       properties:
         operationType:
           type: string
-          enum: ["append", "verify"]
+          enum: [ "append", "verify" ]
         identifierValue:
           type: string
         identifierType:
           $ref: "#/components/schemas/loginIdentifierType"
         ceremonyType:
           type: string
-          enum: ["local", "cda", "security-key"]
+          enum: [ "local", "cda", "security-key" ]
         aaguidDetails:
           $ref: "#/components/schemas/aaguidDetails"
 
@@ -2163,7 +2322,7 @@ components:
       properties:
         reason:
           type: string
-          enum: ["email-link-verified", "process-already-completed"]
+          enum: [ "email-link-verified", "process-already-completed" ]
 
     meRsp:
       type: object
@@ -2240,7 +2399,7 @@ components:
             $ref: "common.yml#/components/schemas/socialProviderType"
         status:
           type: string
-          enum: ["initial", "started", "finished"]
+          enum: [ "initial", "started", "finished" ]
         oauthUrl:
           type: string
         error:
@@ -2269,6 +2428,10 @@ components:
         error:
           $ref: "#/components/schemas/requestError"
 
+    appendCompletionType:
+      type: string
+      enum: [ "auto", "conditional", "manual", "manual-retry" ]
+
   responses:
     "200":
       description: Operation succeeded
@@ -2278,5 +2441,5 @@ components:
             $ref: "common.yml#/components/schemas/genericRsp"
 
 security:
-  - bearerAuth: []
-  - projectID: []
+  - bearerAuth: [ ]
+  - projectID: [ ]

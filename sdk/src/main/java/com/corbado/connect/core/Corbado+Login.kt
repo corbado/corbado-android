@@ -105,6 +105,10 @@ suspend fun Corbado.isLoginAllowed(): ConnectLoginStep = withContext(Dispatchers
         process = p
         client.setProcessId(p.id)
 
+        res.newClientEnvHandle?.let {
+            clientStateService.setClientEnvHandle(it)
+        }
+
         getConnectLoginStepLoginInit(loginData)
     } catch (e: Exception) {
         client.recordLoginEvent(

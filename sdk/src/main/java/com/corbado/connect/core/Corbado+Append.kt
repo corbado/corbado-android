@@ -7,14 +7,34 @@ import com.corbado.connect.core.AppendPasskeyEvent.AppendErrorUnexpected
 import com.corbado.simplecredentialmanager.AuthorizationError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.Duration
 
 sealed class ConnectAppendStep {
-    data class AskUserForAppend(val autoAppend: Boolean, val type: AppendType) : ConnectAppendStep()
+    data class AskUserForAppend(
+        val autoAppend: Boolean, 
+        val type: AppendType, 
+        val conditionalAppend: Boolean,
+        val customData: Map<String, String>? = null
+    ) : ConnectAppendStep()
     data class Skip(val developerDetails: String) : ConnectAppendStep()
 }
 
 enum class AppendType {
     DefaultAppend
+}
+
+enum class AppendCompletionType {
+    Auto, Conditional, Manual, ManualRetry
+}
+
+data class AppendSituationType(val rawValue: String, val localDebounce: Duration = Duration.ofDays(1)) {
+        companion object {
+            val PostLogin = AppendSituationType("post-login", Duration.ZERO)
+            val PasskeyList = AppendSituationType("passkey-list", Duration.ZERO)
+        }
 }
 
 sealed class ConnectAppendStatus {
@@ -35,11 +55,27 @@ enum class AppendSituation {
 }
 
 // Append methods
-suspend fun Corbado.isAppendAllowed(connectTokenProvider: suspend (ConnectTokenType) -> String): ConnectAppendStep =
+suspend fun Corbado.isAppendAllowed(
+    connectTokenProvider: suspend (ConnectTokenType) -> String,
+    situation: AppendSituationType = AppendSituationType.PostLogin
+): ConnectAppendStep =
     withContext(Dispatchers.IO) {
+        val lastAppendAt = clientStateService.getSituationDebounceMap()?.get(situation.rawValue)
+        val now = Instant.now()
+
+        clientStateService.setSituationDebounceMapEntry(situation.rawValue, now)
+        if (lastAppendAt != null) {
+            val elapsed = Duration.between(lastAppendAt, now)
+            if (elapsed < situation.localDebounce) {
+                // we could track this
+
+                return@withContext ConnectAppendStep.Skip("append skipped due to local debounce")
+            }
+        }
+
         try {
             val initRes = try {
-                client.appendInit(buildClientInfo(), clientStateService.getInvitationToken()?.data)
+                client.appendInit(buildClientInfo(), clientStateService.getInvitationToken()?.data, situation.rawValue)
             } catch (e: Exception) {
                 client.recordAppendEvent(
                     AppendErrorUnexpected(e), AppendSituation.CboApiNotAvailablePreAuthenticator
@@ -62,6 +98,10 @@ suspend fun Corbado.isAppendAllowed(connectTokenProvider: suspend (ConnectTokenT
             process = p
             client.setProcessId(p.id)
 
+            initRes.newClientEnvHandle?.let {
+                clientStateService.setClientEnvHandle(it)
+            }
+
             if (!appendData.appendAllowed) {
                 return@withContext ConnectAppendStep.Skip("append not allowed by gradual rollout")
             }
@@ -79,6 +119,7 @@ suspend fun Corbado.isAppendAllowed(connectTokenProvider: suspend (ConnectTokenT
                 client.appendStart(
                     connectToken = connectToken,
                     forcePasskeyAppend = false,
+                    situation = situation.rawValue
                 )
             } catch (e: Exception) {
                 client.recordAppendEvent(
@@ -89,19 +130,33 @@ suspend fun Corbado.isAppendAllowed(connectTokenProvider: suspend (ConnectTokenT
             val options = startRsp.options
                 ?: return@withContext ConnectAppendStep.Skip("append not allowed by passkey intel")
             p.attestationOptions = authController.serializeCreatePublicKeyCredentialRequest(options)
+            p.attestationExpiry = startRsp.expiresAt
 
             return@withContext ConnectAppendStep.AskUserForAppend(
-                startRsp.autoAppend, AppendType.DefaultAppend
+                startRsp.autoAppend, AppendType.DefaultAppend, startRsp.conditionalAppend, startRsp.customData
             )
         } catch (e: Exception) {
             return@withContext ConnectAppendStep.Skip("append failed: ${e.toString()}")
         }
     }
 
-suspend fun Corbado.completeAppend(activityContext: Context): ConnectAppendStatus = withContext(Dispatchers.IO) {
+suspend fun Corbado.completeAppend(
+    activityContext: Context, 
+    completionType: AppendCompletionType = AppendCompletionType.Manual,
+    customData: Map<String, String>? = null,
+    awaitCompletion: Boolean = true
+): ConnectAppendStatus = withContext(Dispatchers.IO) {
     val processCopy = process
     if (processCopy == null) {
         val e = IllegalStateException("process is null")
+        client.recordAppendEvent(
+            AppendErrorUnexpected(e), AppendSituation.CboApiNotAvailablePreAuthenticator
+        )
+        return@withContext ConnectAppendStatus.Error(e)
+    }
+
+    if (processCopy.attestationExpiry?.isBefore(Instant.now()) == true) {
+        val e = IllegalStateException("options are expired")
         client.recordAppendEvent(
             AppendErrorUnexpected(e), AppendSituation.CboApiNotAvailablePreAuthenticator
         )
@@ -117,8 +172,9 @@ suspend fun Corbado.completeAppend(activityContext: Context): ConnectAppendStatu
         return@withContext ConnectAppendStatus.Error(e)
     }
 
+    //val isConditional = completionType == AppendCompletionType.Conditional
     val authenticatorResponse = try {
-        authController.createPasskey(activityContext, attestationOptions)
+        authController.createPasskey(activityContext, attestationOptions, false)
     } catch (e: AuthorizationError) {
         return@withContext when (e) {
             AuthorizationError.Cancelled -> {
@@ -147,31 +203,42 @@ suspend fun Corbado.completeAppend(activityContext: Context): ConnectAppendStatu
         }
     }
 
-    try {
-        val typedAuthenticatorResponse =
-            authController.typeCreatePublicKeyCredentialResponse(authenticatorResponse)
+    val finishBlock: suspend () -> ConnectAppendStatus = {
+        try {
+            val typedAuthenticatorResponse =
+                authController.typeCreatePublicKeyCredentialResponse(authenticatorResponse)
 
-        val finishRsp = client.appendFinish(typedAuthenticatorResponse)
+            val finishRsp = client.appendFinish(typedAuthenticatorResponse, completionType, customData)
 
-        finishRsp.passkeyOperation.let {
-            val lastLogin = LastLogin.from(it)
-            clientStateService.setLastLogin(lastLogin)
-        }
+            finishRsp.passkeyOperation.let {
+                val lastLogin = LastLogin.from(it)
+                clientStateService.setLastLogin(lastLogin)
+            }
 
-        val passkeyDetails = finishRsp.passkeyOperation.aaguidDetails?.let {
-            ConnectAppendStatus.PasskeyDetails(
-                aaguidName = it.name, iconLight = it.iconLight, iconDark = it.iconDark
+            val passkeyDetails = finishRsp.passkeyOperation.aaguidDetails?.let {
+                ConnectAppendStatus.PasskeyDetails(
+                    aaguidName = it.name, iconLight = it.iconLight, iconDark = it.iconDark
+                )
+            }
+            ConnectAppendStatus.Completed(passkeyDetails)
+        } catch (e: Exception) {
+            client.recordAppendEvent(
+                AppendErrorUnexpected(e), AppendSituation.CboApiNotAvailablePostAuthenticator
             )
+            ConnectAppendStatus.Error(e)
         }
-        return@withContext ConnectAppendStatus.Completed(passkeyDetails)
-    } catch (e: Exception) {
-        client.recordAppendEvent(
-            AppendErrorUnexpected(e), AppendSituation.CboApiNotAvailablePostAuthenticator
-        )
+    }
 
-        return@withContext ConnectAppendStatus.Error(e)
+    return@withContext if (awaitCompletion) {
+        finishBlock()
+    } else {
+        CoroutineScope(Dispatchers.IO).launch {
+            finishBlock()
+        }
+        ConnectAppendStatus.Completed(null)
     }
 }
+
 
 suspend fun Corbado.appendRecordExplicitAbortEvent() = withContext(Dispatchers.IO) {
     client.recordAppendEvent(AppendPasskeyEvent.AppendExplicitAbort)
