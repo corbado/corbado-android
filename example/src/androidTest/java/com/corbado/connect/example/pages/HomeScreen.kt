@@ -75,4 +75,8 @@ class HomeScreen(composeTestRule: ComposeTestRule) : BaseScreen(composeTestRule)
             Thread.sleep(2000)
         }
     }
+
+    fun setLocalDebounceDays(days: String) {
+        waitAndSetText("homeScreen.localDebounceTextField", days)
+    }
 }

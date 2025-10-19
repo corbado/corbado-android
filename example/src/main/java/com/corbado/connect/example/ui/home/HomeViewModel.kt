@@ -2,6 +2,7 @@ package com.corbado.connect.example.ui.home
 
 import android.app.Application
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
@@ -36,8 +37,13 @@ data class HomeUiState(
 )
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
+    companion object {
+        @VisibleForTesting
+        var testLocalDebounceDays: String? = null
+    }
+    
     private val corbado = CorbadoService.getInstance(application)
-    val uiState = MutableStateFlow(HomeUiState())
+    val uiState = MutableStateFlow(HomeUiState(localDebounceDays = testLocalDebounceDays ?: "0"))
     private var isAutoAppend = false
     
     private val _navigationEvents = MutableSharedFlow<HomeNavigationEvent>()
@@ -122,6 +128,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     fun updateLocalDebounceDays(days: String) {
+        testLocalDebounceDays = days
         uiState.value = uiState.value.copy(localDebounceDays = days)
     }
     

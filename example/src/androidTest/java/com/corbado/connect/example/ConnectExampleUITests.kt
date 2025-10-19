@@ -8,6 +8,7 @@ import com.corbado.connect.example.pages.LoginStatus.FallbackSecondTOTP
 import com.corbado.connect.example.pages.LoginStatus.PasskeyErrorSoft
 import com.corbado.connect.example.pages.LoginStatus.PasskeyOneTap
 import com.corbado.connect.example.pages.LoginStatus.PasskeyTextField
+import com.corbado.connect.example.ui.home.HomeViewModel
 import com.corbado.simplecredentialmanager.AuthorizationError
 import com.corbado.simplecredentialmanager.mocks.ControlServer
 import com.corbado.simplecredentialmanager.mocks.VirtualAuthorizationController
@@ -75,6 +76,9 @@ class ConnectExampleUITests {
         MainActivity.controlServerURL = null
 
         composeTestRule.activity.resetCorbadoInstance()
+
+        // Reset HomeViewModel test state
+        HomeViewModel.testLocalDebounceDays = null
 
         // Clear any app-level state (you might need to add more here based on your app)
         clearAppState()
@@ -242,6 +246,46 @@ class ConnectExampleUITests {
         homeScreen3.declineAutomaticAppend(controlServer)
         homeScreen3.declineBottomSheet()
         homeScreen.clickButton1(true)
+    }
+
+    @Test
+    fun testInAppAppendInstantWithDebounce() = runTest {
+        val initialScreen = startApp(allowInAppAppendInstant = true)
+        val email = TestDataFactory.createEmail()
+        val authenticatorApp = AuthenticatorApp()
+
+        controlServer.createError = AuthorizationError.Cancelled
+        val signUpScreen = initialScreen.navigateToSignUp()
+        val postLoginScreen = signUpScreen.signUpWithValidData(
+            email = email,
+            phoneNumber = TestDataFactory.phoneNumber,
+            password = TestDataFactory.password
+        )
+
+        val totpSetupScreen = postLoginScreen.skipAfterSignUp()
+        val (profileScreen, _) = totpSetupScreen.setupTOTP(authenticatorApp)
+        waitForCondition { profileScreen.countNumberOfPasskeys() == 0 }
+        controlServer.createError = null
+
+        val homeScreen = profileScreen.goToHome()
+        homeScreen.acceptAutomaticAppend()
+        
+        homeScreen.setLocalDebounceDays("1")
+        
+        val profileScreen2 = homeScreen.navigateBackToProfileScreen()
+        waitForCondition { profileScreen2.countNumberOfPasskeys() == 1 }
+        
+        profileScreen2.deletePasskey(profileScreen2.getPasskeyIds()[0], true)
+        waitForCondition { profileScreen2.countNumberOfPasskeys() == 0 }
+        
+        val homeScreen2 = profileScreen2.goToHome()
+
+        // we wait a bit to give the append a chance to happen
+        // we don't expect an append due to the debounce
+        Thread.sleep(2000)
+        
+        val profileScreen3 = homeScreen2.navigateBackToProfileScreen()
+        waitForCondition { profileScreen3.countNumberOfPasskeys() == 0 }
     }
 
     @Test
