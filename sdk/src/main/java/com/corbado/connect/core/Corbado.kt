@@ -1,6 +1,8 @@
 package com.corbado.connect.core
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.corbado.connect.api.models.ClientInformation
 import com.corbado.connect.api.models.ClientStateMeta
@@ -128,11 +130,16 @@ class Corbado(
             ClientStateMeta(ts = it.ts, source = ClientStateMeta.Source.native)
         }
 
+        val nativeMeta = PasskeyClientTelemetryCollector.collectData(context, sdkInitTime)
+        if (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            Log.d("CorbadoSDK", "Device telemetry: $nativeMeta")
+        }
+
         return ClientInformation(
             clientEnvHandle = clientEnvHandleEntry?.data,
             isNative = true,
             clientEnvHandleMeta = clientStateMeta,
-            nativeMeta = PasskeyClientTelemetryCollector.collectData(context, sdkInitTime)
+            nativeMeta = nativeMeta
         )
     }
 } 

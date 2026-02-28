@@ -2235,6 +2235,10 @@ components:
           type: boolean
         isDeviceSecure:
           type: boolean
+        androidApiLevel:
+          type: integer
+        googlePlayServicesVersion:
+          type: string
         error:
           type: string
         brand:
