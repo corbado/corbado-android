@@ -28,6 +28,8 @@ internal object PasskeyClientTelemetryCollector {
                 isBluetoothAvailable = isBluetoothAvailable(context),
                 isBluetoothOn = isBluetoothOn(context),
                 isGooglePlayServices = isGooglePlayServicesAvailable(context),
+                androidApiLevel = Build.VERSION.SDK_INT,
+                googlePlayServicesVersion = getGmsVersion(context),
                 displayName = getAppLabel(context),
                 brand = Build.BRAND,
                 model = Build.MODEL + "|" + Build.HARDWARE + "|" + Build.DEVICE + "|" + Build.PRODUCT,
@@ -35,7 +37,9 @@ internal object PasskeyClientTelemetryCollector {
                 screen = getScreenData(context),
                 sdkInitTimeMs = sdkInitTime.toEpochMilli()
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            // Global fail-safe: catch Throwable to prevent app crashes on exotic
+            // Android environments that might throw Errors during telemetry collection.
             NativeMeta(
                 platform = "Android",
                 platformVersion = Build.VERSION.RELEASE,
@@ -48,7 +52,7 @@ internal object PasskeyClientTelemetryCollector {
     private fun getScreenData(context: Context): NativeMetaScreen {
         val metrics: DisplayMetrics = context.resources.displayMetrics
 
-        val densityFactor = metrics.density
+        val densityFactor = if (metrics.density > 0f) metrics.density else 1f
         val widthPixels = metrics.widthPixels
         val heightPixels = metrics.heightPixels
         val widthDp = (widthPixels / densityFactor).toFloat()
@@ -61,33 +65,41 @@ internal object PasskeyClientTelemetryCollector {
         )
     }
 
-    private fun getAppVersion(context: Context): String {
+    private fun getAppVersion(context: Context): String? {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         return packageInfo.versionName
     }
 
-    private fun getAppBuild(context: Context): String {
-        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            return packageInfo.longVersionCode.toString()
-        } else {
-            @Suppress("DEPRECATION")
-            return packageInfo.versionCode.toString()
+    private fun getAppBuild(context: Context): String? {
+        return try {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageInfo.longVersionCode.toString()
+            } else {
+                @Suppress("DEPRECATION")
+                packageInfo.versionCode.toString()
+            }
+        } catch (_: Exception) {
+            null
         }
     }
 
     private fun getDeviceOwnerAuth(context: Context): NativeMeta.DeviceOwnerAuth {
-        return when (BiometricManager.from(context)
-            .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)) {
-            BiometricManager.BIOMETRIC_SUCCESS -> NativeMeta.DeviceOwnerAuth.biometrics
-            else -> {
-                val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE)
-                        as? KeyguardManager
-                when {
-                    keyguardManager?.isDeviceSecure == true -> NativeMeta.DeviceOwnerAuth.code
-                    else -> NativeMeta.DeviceOwnerAuth.none
+        return try {
+            when (BiometricManager.from(context)
+                .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)) {
+                BiometricManager.BIOMETRIC_SUCCESS -> NativeMeta.DeviceOwnerAuth.biometrics
+                else -> {
+                    val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE)
+                            as? KeyguardManager
+                    when {
+                        keyguardManager?.isDeviceSecure == true -> NativeMeta.DeviceOwnerAuth.code
+                        else -> NativeMeta.DeviceOwnerAuth.none
+                    }
                 }
             }
+        } catch (_: Throwable) {
+            NativeMeta.DeviceOwnerAuth.none
         }
     }
 
@@ -96,25 +108,46 @@ internal object PasskeyClientTelemetryCollector {
     }
 
     private fun isBluetoothOn(context: Context): Boolean? {
-        val bluetoothManager = context.getSystemService<BluetoothManager>()
-        val bluetoothAdapter = bluetoothManager?.adapter
-        return bluetoothAdapter?.isEnabled
+        return try {
+            val bluetoothManager = context.getSystemService<BluetoothManager>()
+            val bluetoothAdapter = bluetoothManager?.adapter
+            bluetoothAdapter?.isEnabled
+        } catch (_: Throwable) {
+            // Catching Throwable instead of Exception because rare OEM builds with
+            // broken or customized Bluetooth stacks can throw low-level Errors.
+            null
+        }
     }
 
     private fun isGooglePlayServicesAvailable(context: Context): Boolean? {
-        val googleApiAvailability = GoogleApiAvailability.getInstance()
-        val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context)
-        val pkgInfo = context.packageManager.getPackageInfo("com.google.android.gms", 0)
-        val playServicesVersion = if (Build.VERSION.SDK_INT >= 28)
-            pkgInfo.longVersionCode
-        else
-            @Suppress("DEPRECATION") pkgInfo.versionCode.toLong()
-        return resultCode == ConnectionResult.SUCCESS
+        return try {
+            val googleApiAvailability = GoogleApiAvailability.getInstance()
+            val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context)
+            resultCode == ConnectionResult.SUCCESS
+        } catch (_: Throwable) {
+            // Use Throwable to safely handle exotic devices/ROMs where Play Services
+            // might be stripped or stubbed in ways that throw low-level Errors.
+            null
+        }
+    }
+
+    private fun getGmsVersion(context: Context): String? {
+        return try {
+            context.packageManager.getPackageInfo("com.google.android.gms", 0).versionName
+        } catch (_: Throwable) {
+            // Catching Throwable handles cases where the Package Manager service is dead,
+            // the package is invisible (Android 11+), or exotic ROMs return null.
+            null
+        }
     }
 
     fun getAppLabel(context: Context): String {
-        val packageManager = context.packageManager
-        val applicationInfo = packageManager.getApplicationInfo(context.packageName, 0)
-        return packageManager.getApplicationLabel(applicationInfo).toString()
+        return try {
+            val packageManager = context.packageManager
+            val applicationInfo = packageManager.getApplicationInfo(context.packageName, 0)
+            packageManager.getApplicationLabel(applicationInfo).toString()
+        } catch (_: Exception) {
+            ""
+        }
     }
 }
