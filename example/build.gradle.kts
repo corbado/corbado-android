@@ -24,11 +24,14 @@ android {
 
     // this signing config only exists to allow everybody to easily run the example
     // don't use this keystore to sign your own apps
+    // the keystore is not part of the repository (see .gitignore); without it (e.g. on CI) the
+    // default debug keystore is used
+    val exampleKeystore = file("./example.keystore")
     signingConfigs {
         create("example") {
             keyAlias = "example"
             keyPassword = "example"
-            storeFile = file("./example.keystore")
+            storeFile = exampleKeystore
             storePassword = "example"
         }
     }
@@ -42,12 +45,14 @@ android {
             )
         }
 
-        debug {
-            signingConfig = signingConfigs.getByName("example")
-        }
+        if (exampleKeystore.exists()) {
+            debug {
+                signingConfig = signingConfigs.getByName("example")
+            }
 
-        release {
-            signingConfig = signingConfigs.getByName("example")
+            release {
+                signingConfig = signingConfigs.getByName("example")
+            }
         }
     }
     compileOptions {
