@@ -7,6 +7,7 @@ import com.corbado.connect.api.models.FallbackOperationError
 import com.corbado.simplecredentialmanager.AuthorizationError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Instant
 
 sealed class LoginWithoutIdentifierError(val message: String) {
     object CorbadoAPIError : LoginWithoutIdentifierError(defaultErrorMessage)
@@ -159,7 +160,13 @@ suspend fun Corbado.loginWithTextField(
             )
         }
 
-        client.setProcessId(p.id)
+        val validProcess = ensureValidLoginProcess()
+            ?: return@withContext ConnectLoginWithIdentifierStatus.InitSilentFallback(
+                identifier,
+                "The login-init data expired and the re-run of login-init did not allow passkey login.",
+            )
+
+        client.setProcessId(validProcess.id)
 
         val (assertionOptions, preferImmediatelyAvailable) = try {
             val startRsp = client.loginStart(identifier = identifier)
@@ -524,6 +531,30 @@ private fun handleFallbackOperationErrorForLoginWithoutIdentifier(
                 )
             }
         }
+    }
+}
+
+// safety margin (seconds) when checking the expiry of login-init data
+private const val loginInitExpiryMarginSec = 5L
+
+/**
+ * Returns the current process if its login-init data is still valid.
+ *
+ * The backend removes processes after their lifetime. A login-start with a stale process ID is answered with a
+ * silent fallback (no passkey login, nothing tracked), so if the login-init data has expired we transparently
+ * re-run login-init (same as the web SDK does before every login-start). Returns null if the re-run did not
+ * allow passkey login (e.g. gradual rollout changed) or failed.
+ */
+internal suspend fun Corbado.ensureValidLoginProcess(): ConnectProcess? {
+    val p = process
+    val expiresAt = p?.loginData?.expiresAt
+    if (p != null && expiresAt != null && expiresAt > Instant.now().epochSecond + loginInitExpiryMarginSec) {
+        return p
+    }
+
+    return when (isLoginAllowed()) {
+        is ConnectLoginStep.InitFallback -> null
+        else -> process
     }
 }
 
