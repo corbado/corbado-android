@@ -13,10 +13,12 @@ matching `v<semver>` tag.
 
 1. Bump `VERSION_NAME` in `sdk/gradle.properties` and add a `CHANGELOG.md` entry; commit
    (`vX.Y.Z`) and merge to `main`.
-2. Tag and push:
+2. Tag and push to the private repo (the workflow only runs there; `corbado/corbado-android`
+   is a mirror that receives `main` and the tag afterwards):
    ```bash
    git tag vX.Y.Z
-   git push public vX.Y.Z
+   git push private main vX.Y.Z
+   git push public main vX.Y.Z
    ```
    The workflow checks that the tag matches `VERSION_NAME`, builds and tests, publishes to
    Maven Central and releases the deployment automatically.

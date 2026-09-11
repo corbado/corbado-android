@@ -17,7 +17,8 @@ env:
 
 jobs:
   release:
-    if: github.repository == 'corbado/corbado-android' || github.repository == 'corbado/corbado-android-private'
+    # Releases run from the private repo (PRs and secrets live there); corbado/corbado-android is a mirror.
+    if: github.repository == 'corbado/corbado-android-private'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # Publishing secrets live in this environment; its deployment policy restricts access
