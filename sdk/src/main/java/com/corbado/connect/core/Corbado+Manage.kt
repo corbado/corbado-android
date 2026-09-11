@@ -9,6 +9,7 @@ import com.corbado.simplecredentialmanager.AuthorizationError
 import com.corbado.simplecredentialmanager.PublicKeyCredentialSignalAllAcceptedCredentials
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Instant
 
 // Enums and classes for managing passkeys
 sealed class ConnectManageStep {
@@ -87,6 +88,8 @@ suspend fun Corbado.completePasskeyListAppend(
 ): ConnectManageStatus =
     withContext(Dispatchers.IO) {
         try {
+            ensureValidManageProcess()
+
             val connectToken = connectTokenProvider(ConnectTokenType.PasskeyAppend)
             val startRsp = try {
                 client.appendStart(
@@ -182,6 +185,8 @@ suspend fun Corbado.deletePasskey(
     passkeyId: String
 ): ConnectManageStatus = withContext(Dispatchers.IO) {
     try {
+        ensureValidManageProcess()
+
         val connectToken = connectTokenProvider(ConnectTokenType.PasskeyDelete)
         client.manageDelete(connectToken = connectToken, passkeyId = passkeyId)
         clientStateService.clearLastLogin()
@@ -250,6 +255,22 @@ private suspend fun Corbado.getPasskeys(
     }
 
     return passkeys
+}
+
+// safety margin (seconds) when checking the expiry of manage-init data
+private const val manageInitExpiryMarginSec = 5L
+
+/**
+ * Re-runs manage-init if the manage-init data of the current process has expired (the backend removes processes
+ * after their lifetime; a stale process ID would be rejected by the follow-up calls).
+ */
+private suspend fun Corbado.ensureValidManageProcess() {
+    val expiresAt = process?.manageData?.expiresAt
+    if (process != null && expiresAt != null && expiresAt > Instant.now().epochSecond + manageInitExpiryMarginSec) {
+        return
+    }
+
+    manageAllowedStep1()
 }
 
 private suspend fun Corbado.manageAllowedStep1(): Boolean = withContext(Dispatchers.IO) {
