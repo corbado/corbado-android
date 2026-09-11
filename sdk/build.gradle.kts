@@ -59,7 +59,8 @@ mavenPublishing {
     publishToMavenCentral()
     signAllPublications()
 
-    coordinates("com.corbado", "connect-core", "1.4.1")
+    // Coordinates come from gradle.properties in this module (GROUP, POM_ARTIFACT_ID,
+    // VERSION_NAME). The release workflow passes VERSION_NAME from the git tag.
 
     pom {
         name.set("Corbado Connect SDK")
